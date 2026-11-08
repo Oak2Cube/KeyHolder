@@ -14,3 +14,4 @@ Status values: Proposed, Accepted, Superseded, Deprecated.
 | [0006](0006-no-cloud-sync-in-v1.md) | No cloud sync in version 1 | Accepted |
 | [0007](0007-single-writer-manual-transfer.md) | Single-writer manual transfer | Proposed |
 | [0008](0008-installer-and-updates.md) | Installer and update mechanism | Proposed |
+| [0009](0009-interim-plain-fake-data-schema.md) | Interim plain-column schema for fake data (Milestone 1) | Accepted |

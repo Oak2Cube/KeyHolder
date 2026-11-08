@@ -3,117 +3,94 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:views="clr-namespace:KeyHolder.Desktop.Views"
         mc:Ignorable="d"
         Title="KeyHolder"
-        Width="760"
-        Height="560"
-        MinWidth="620"
-        MinHeight="480"
+        Width="1100"
+        Height="720"
+        MinWidth="900"
+        MinHeight="600"
         WindowStartupLocation="CenterScreen"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource PrimaryTextBrush}"
         TextOptions.TextFormattingMode="Display">
     <Window.Resources>
-        <DataTemplate x:Key="LockedTemplate">
-            <Grid>
-                <Border Width="420"
-                        Padding="44"
-                        HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Background="{StaticResource CardBackgroundBrush}"
-                        BorderBrush="#26334D"
-                        BorderThickness="1"
-                        CornerRadius="20">
-                    <StackPanel>
-                        <Border Width="76"
-                                Height="76"
-                                Margin="0,0,0,24"
-                                HorizontalAlignment="Center"
-                                Background="#102D44"
-                                BorderBrush="{StaticResource AccentBrush}"
-                                BorderThickness="1"
-                                CornerRadius="38">
-                            <TextBlock HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"
-                                       FontFamily="Segoe UI Semibold"
-                                       FontSize="13"
-                                       Foreground="{StaticResource AccentBrush}"
-                                       Text="LOCKED" />
-                        </Border>
-
-                        <TextBlock HorizontalAlignment="Center"
-                                   FontSize="30"
-                                   FontWeight="SemiBold"
-                                   Text="KeyHolder" />
-                        <TextBlock Margin="0,10,0,30"
-                                   HorizontalAlignment="Center"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   Text="Your vault starts locked."
-                                   TextAlignment="Center" />
-
-                        <TextBlock Margin="0,0,0,8"
-                                   FontSize="13"
-                                   FontWeight="SemiBold"
-                                   Text="Master password" />
-                        <PasswordBox Height="44"
-                                     Padding="12,9"
-                                     IsEnabled="False"
-                                     ToolTip="Encrypted unlock is implemented in Milestone 2." />
-
-                        <Button Height="44"
-                                Margin="0,16,0,0"
-                                IsDefault="True"
-                                IsEnabled="False"
-                                Background="{StaticResource AccentBrush}"
-                                BorderThickness="0"
-                                Content="Unlock"
-                                FontSize="14"
-                                FontWeight="SemiBold"
-                                Foreground="#07111F" />
-
-                        <TextBlock Margin="0,20,0,0"
-                                   HorizontalAlignment="Center"
-                                   Foreground="{StaticResource SecondaryTextBrush}"
-                                   FontSize="12"
-                                   Text="Milestone 0 shell — no secret data is accepted yet."
-                                   TextAlignment="Center"
-                                   TextWrapping="Wrap" />
-                    </StackPanel>
-                </Border>
-
-                <TextBlock Margin="24"
-                           HorizontalAlignment="Left"
-                           VerticalAlignment="Bottom"
-                           Foreground="{StaticResource SecondaryTextBrush}"
-                           FontSize="12"
-                           Text="{Binding StatusText}" />
-            </Grid>
-        </DataTemplate>
-
-        <DataTemplate x:Key="UnlockedTemplate">
-            <Grid Margin="32">
-                <StackPanel>
-                    <TextBlock FontSize="28"
-                               FontWeight="SemiBold"
-                               Text="KeyHolder" />
-                    <TextBlock Margin="0,10,0,0"
-                               Foreground="{StaticResource SecondaryTextBrush}"
-                               Text="The unlocked workspace will be implemented after the encrypted local vault." />
-                </StackPanel>
-            </Grid>
-        </DataTemplate>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     </Window.Resources>
 
-    <ContentControl Content="{Binding}">
-        <ContentControl.Style>
-            <Style TargetType="ContentControl">
-                <Setter Property="ContentTemplate" Value="{StaticResource LockedTemplate}" />
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding IsLocked}" Value="False">
-                        <Setter Property="ContentTemplate" Value="{StaticResource UnlockedTemplate}" />
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </ContentControl.Style>
-    </ContentControl>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Fake-data warning, always visible. -->
+        <Border Grid.Row="0"
+                Padding="16,8"
+                Background="#3B2F0B"
+                BorderBrush="{StaticResource WarningBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="12"
+                           Foreground="{StaticResource WarningBrush}"
+                           Text="{Binding Banner}"
+                           TextTrimming="CharacterEllipsis" />
+                <Button Grid.Column="1"
+                        Margin="12,0,0,0"
+                        Padding="12,4"
+                        Command="{Binding LockCommand}"
+                        Content="Lock"
+                        Visibility="{Binding IsUnlocked, Converter={StaticResource BoolToVisibility}}" />
+            </Grid>
+        </Border>
+
+        <views:LockedView Grid.Row="1"
+                          Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisibility}}" />
+
+        <views:VaultView Grid.Row="1"
+                         DataContext="{Binding Vault}"
+                         Visibility="{Binding DataContext.IsUnlocked, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}" />
+
+        <!-- Status bar: message on the left, entry count and replica dirty state on the right. -->
+        <Border Grid.Row="2"
+                Padding="16,6"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushColor}"
+                BorderThickness="0,1,0,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontSize="12"
+                           Foreground="{StaticResource SecondaryTextBrush}"
+                           Text="{Binding StatusText}"
+                           TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Margin="0,0,16,0"
+                               FontSize="12"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Text="{Binding Vault.EntryCountText}" />
+                    <TextBlock FontSize="12" Text="{Binding Vault.DirtyText}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Vault.IsDirty}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

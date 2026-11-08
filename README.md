@@ -102,13 +102,14 @@ global.json                     # pinned .NET SDK
 .vsconfig                       # Visual Studio workload recommendation
 .github/workflows/ci.yml        # Windows restore/build/test + main-branch artifact
 src/
-  KeyHolder.Domain/             # entities and business rules
-  KeyHolder.Cryptography/       # narrow, reviewed encryption boundary
-  KeyHolder.Infrastructure/     # SQLite, one durable replica (temp+replace)
-  KeyHolder.Desktop/            # WPF views and view models (+ Properties/launchSettings.json)
+  KeyHolder.Domain/             # entries, validation, search/filter/sort, lock policy, repository interfaces
+  KeyHolder.Cryptography/       # narrow, reviewed boundary: secure-random password generator (encryption in Milestone 2)
+  KeyHolder.Infrastructure/     # SQLite repository + migrations, in-memory repository, fake-data seeder
+  KeyHolder.Desktop/            # WPF views, view models (MVVM), clipboard/idle/session adapters
 tests/
-  KeyHolder.UnitTests/
-  KeyHolder.IntegrationTests/
+  KeyHolder.UnitTests/          # domain, generator, and layer-rule tests
+  KeyHolder.IntegrationTests/   # SQLite and in-memory repository contract, migrations, rollback
+  KeyHolder.Desktop.Tests/      # view model tests (no window needed)
 docs/
 ```
 
@@ -116,7 +117,31 @@ Build and prove the offline vault first (including search, filter, and sort). Ad
 
 ## Development
 
-Milestone 0 is implemented. The application currently launches as a locked shell and deliberately does not accept a master password or store data.
+Milestones 0 and 1 are implemented. The application starts locked. **Unlock has no master password yet** and opens a local vault of **fake demo data** stored **unencrypted** in `%LOCALAPPDATA%\KeyHolder\working.sqlite` (see [ADR 0009](docs/adr/0009-interim-plain-fake-data-schema.md)). A warning banner is always visible. Do not enter real credentials until the encrypted vault (Milestone 2) is implemented and reviewed.
+
+What works in Milestone 1:
+
+- create, edit, and delete entries; title is required, everything else is optional (username, email, URL, d-tags, s-tags, importance, password, notes)
+- search in 1 to 6 chosen fields, filter by d-tags and s-tags, sort by name, date, or importance
+- a random password generator in the editor
+- idle (5 minutes) and Windows-session locking; locking clears the list, search, editor draft, revealed values, and the app's clipboard value
+- the password always shows `••••••••`; Reveal (10 s) and Copy (20 s clipboard timeout) read only the selected entry's secret on demand
+- a status-bar indicator for changes since the last replica export (the export itself arrives in Milestone 3)
+
+The demo data is created once. To start over, close the app and delete `%LOCALAPPDATA%\KeyHolder\working.sqlite`.
+
+#### Manual smoke checklist
+
+1. Launch, press **Unlock**: ten `Fake ...` entries appear and the status bar shows "No local changes".
+2. **New entry** with only a title: it saves; an empty title shows an error and does not save.
+3. Edit it (tags, importance, a generated password), save; then delete it and confirm. The status bar now shows "Changed since last replica export".
+4. Close and reopen the app: your changes are still there and the demo data was not added again.
+5. Search for `bank`; open **Search in** and add d-tags or s-tags to search them; the last checked field cannot be unchecked.
+6. Filter by an s-tag such as `Finance`, add a d-tag, then **Clear filters**.
+7. Sort by Name, Date, and Importance, with and without **Descending**.
+8. Select an entry: the password shows `••••••••`. **Reveal** shows it for about 10 seconds; **Copy** puts it on the clipboard, which clears after about 20 seconds.
+9. Press **Lock**, then Unlock: the search box, selection, and revealed values are gone.
+10. Unlock and wait 5 minutes without touching the mouse or keyboard, or press `Win+L`: the vault is locked when you return.
 
 Requirements:
 
@@ -152,7 +177,7 @@ The solution can be restored and compiled from non-Windows hosts because the des
 4. Or run the default test task: **Terminal → Run Task… → test** (or **Run Test Task**). That builds Debug and runs `dotnet test` for the whole solution.
 5. To debug a test: open the test method, set a breakpoint, then use **Debug Test** above the `[Fact]` attribute (CodeLens) or the debug icon in the Testing view.
 
-Launch the locked shell with **Run and Debug → KeyHolder.Desktop**, or `F5` after selecting that configuration.
+Launch the app with **Run and Debug → KeyHolder.Desktop**, or `F5` after selecting that configuration.
 
 ### CI workflow
 
@@ -181,10 +206,10 @@ Project dependencies point inward:
 
 ```text
 Desktop ──► Infrastructure ──► Domain
-                    │
-                    └────────► Cryptography
+   │               │
+   └───────────────┴────────► Cryptography
 
-Domain and Cryptography do not reference UI or infrastructure.
+Domain and Cryptography do not reference UI, infrastructure, or each other.
 ```
 
 [`Directory.Build.props`](Directory.Build.props) enables nullable reference types, recommended .NET analyzers, deterministic builds, code-style enforcement, package lock files, and warnings as errors. [`.editorconfig`](.editorconfig) supplies formatting and IDE analyzer severity.

@@ -7,10 +7,13 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>KeyHolder.Desktop</RootNamespace>
     <AssemblyName>KeyHolder.Desktop</AssemblyName>
+    <!-- Required by the LibraryImport source generator (clipboard sequence number). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\KeyHolder.Domain\KeyHolder.Domain.csproj" />
+    <ProjectReference Include="..\KeyHolder.Cryptography\KeyHolder.Cryptography.csproj" />
     <ProjectReference Include="..\KeyHolder.Infrastructure\KeyHolder.Infrastructure.csproj" />
   </ItemGroup>
 

@@ -24,6 +24,11 @@ Done when a clean Windows machine can clone, build, test, and launch the locked 
 
 ## Milestone 1 — local vault with fake data
 
+**Status: implemented.**
+The app opens a vault of fake demo data stored unencrypted in `%LOCALAPPDATA%\KeyHolder\working.sqlite` (see [ADR 0009](adr/0009-interim-plain-fake-data-schema.md)).
+Unlock needs no password until Milestone 2.
+Search, filter, sort, locking, Reveal/Copy, and the dirty state work as listed below.
+
 Learn: MVVM, commands, validation, repositories, and SQLite transactions.
 
 Build:

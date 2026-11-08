@@ -23,7 +23,7 @@ public sealed class LayerDependencyTests
     {
         AssertDoesNotReference(
             typeof(Cryptography.AssemblyMarker).Assembly,
-            OuterLayerNames);
+            OuterLayerNames.Append("KeyHolder.Domain"));
     }
 
     [Fact]

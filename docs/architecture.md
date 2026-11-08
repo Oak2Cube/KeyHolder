@@ -196,6 +196,10 @@ It never unlocks secret envelopes for other entries.
 
 ## 5. Local SQLite model
 
+> **Milestone 1 note:** until the encrypted vault (Milestone 2), the `entry` table keeps the same two groups as plain columns
+> (`title`, `username`, ... and `password`, `notes`) with separate revisions, and holds fake data only.
+> See [ADR 0009](adr/0009-interim-plain-fake-data-schema.md). The schema below is the Milestone 2 target.
+
 Suggested tables:
 
 ```text
