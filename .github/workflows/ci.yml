@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, test, and publish
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore KeyHolder.sln --locked-mode
+
+      - name: Build
+        run: dotnet build KeyHolder.sln --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test KeyHolder.sln --configuration Release --no-build --no-restore --verbosity normal
+
+      - name: Publish Desktop
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: >
+          dotnet publish src/KeyHolder.Desktop/KeyHolder.Desktop.csproj
+          --configuration Release
+          -r win-x64
+          --self-contained false
+          -o artifacts/KeyHolder
+          /p:RestoreLockedMode=false
+
+      - name: Upload Desktop artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeyHolder-win-x64
+          path: artifacts/KeyHolder
+          if-no-files-found: error
