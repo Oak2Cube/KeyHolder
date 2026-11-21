@@ -105,6 +105,8 @@ Secret envelopes stay locked.
 The password box always shows `••••••••`.
 It does not show the real password length.
 Reveal and Copy unlock only the selected entry’s secret part for a short time.
+The notes have their own Reveal and Copy buttons.
+Copy for notes puts only the notes on the clipboard, and it clears after the same timeout as the password.
 
 #### Search, filter, and sort
 
@@ -190,7 +192,7 @@ In SQLite you may only see non-secret technical fields, for example:
 
 Password and notes share one secret envelope.
 So Reveal or Copy must briefly unlock that whole selected secret part.
-The UI shows only the field you asked for.
+The UI shows only the field you asked for, and Copy places only that one field on the clipboard.
 It clears temporary data when it can.
 It never unlocks secret envelopes for other entries.
 

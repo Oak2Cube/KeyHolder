@@ -238,6 +238,7 @@
                                        TextWrapping="Wrap" />
                             <Button Command="{Binding Secret.RevealNotesCommand}"
                                     Content="{Binding Secret.RevealNotesLabel}" />
+                            <Button Command="{Binding Secret.CopyNotesCommand}" Content="Copy" />
                         </StackPanel>
 
                         <TextBlock Margin="0,8,0,0"

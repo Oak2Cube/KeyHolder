@@ -109,6 +109,32 @@ public sealed class SecretViewModelTests
     }
 
     [Fact]
+    public async Task CopyNotesPutsTheNotesOnTheClipboardWithATimeout()
+    {
+        var harness = await Harness.CreateAsync();
+        await harness.SelectAsync("Fake Mail");
+
+        harness.Secret.CopyNotesCommand.Execute(null);
+
+        Assert.Equal("FAKE DATA: not a real account.", harness.Clipboard.Text);
+        Assert.Equal(SecretViewModel.ClipboardTimeout, harness.Clipboard.ClearAfter);
+        Assert.Equal(SecretPlaceholder.Value, harness.Secret.NotesDisplay);
+        Assert.False(harness.Secret.IsNotesRevealed);
+    }
+
+    [Fact]
+    public async Task CopyNotesOfAnEntryWithoutNotesCopiesNothing()
+    {
+        var harness = await Harness.CreateAsync();
+        await harness.SelectAsync("Fake Cloud Storage");
+
+        harness.Secret.CopyNotesCommand.Execute(null);
+
+        Assert.Null(harness.Clipboard.Text);
+        Assert.Contains("no notes", harness.Secret.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task RevealAndCopyDoNothingWithoutASelection()
     {
         var harness = await Harness.CreateAsync();
@@ -116,6 +142,8 @@ public sealed class SecretViewModelTests
 
         Assert.False(harness.Secret.RevealPasswordCommand.CanExecute(null));
         Assert.False(harness.Secret.CopyPasswordCommand.CanExecute(null));
+        Assert.False(harness.Secret.RevealNotesCommand.CanExecute(null));
+        Assert.False(harness.Secret.CopyNotesCommand.CanExecute(null));
     }
 
     [Fact]

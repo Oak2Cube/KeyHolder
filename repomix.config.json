@@ -1,0 +1,86 @@
+{
+  "$schema": "https://repomix.com/schemas/latest/schema.json",
+  "input": {
+    "maxFileSize": 1048576
+  },
+  "output": {
+    "filePath": "repomix-output.xml",
+    "style": "xml",
+    "parsableStyle": false,
+    "fileSummary": true,
+    "directoryStructure": true,
+    "files": true,
+    "removeComments": false,
+    "removeEmptyLines": false,
+    "showLineNumbers": false,
+    "topFilesLength": 10,
+    "truncateBase64": false,
+    "copyToClipboard": false,
+    "includeEmptyDirectories": false,
+    "git": {
+      "sortByChanges": false,
+      "includeDiffs": false,
+      "includeLogs": false
+    }
+  },
+  "include": [
+    "src/**/*.cs",
+    "src/**/*.xaml",
+    "tests/**/*.cs"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDotIgnore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/.vs/**",
+      "**/artifacts/**",
+      "**/TestResults/**",
+      "**/*.g.cs",
+      "**/*.g.i.cs",
+      "**/*.md",
+      "**/*.json",
+      "**/*.yml",
+      "**/*.yaml",
+      "**/*.csproj",
+      "**/*.sln",
+      "**/*.props",
+      "**/*.targets",
+      "**/*.editorconfig",
+      "**/*.vsconfig",
+      "**/.editorconfig",
+      "**/.gitignore",
+      "**/.gitattributes",
+      "**/*.lock",
+      "**/*.config",
+      "**/*.xml",
+      "**/*.txt",
+      "**/*.png",
+      "**/*.jpg",
+      "**/*.jpeg",
+      "**/*.gif",
+      "**/*.ico",
+      "**/*.svg",
+      "**/*.bmp",
+      "**/*.dll",
+      "**/*.exe",
+      "**/*.pdb",
+      "**/*.zip",
+      "**/*.db",
+      "**/*.sqlite",
+      "**/*.sqlite3",
+      "**/*.ttf",
+      "**/*.otf",
+      "**/*.woff",
+      "**/*.woff2"
+    ]
+  },
+  "security": {
+    "enableSecurityCheck": true
+  },
+  "tokenCount": {
+    "encoding": "o200k_base"
+  }
+}
