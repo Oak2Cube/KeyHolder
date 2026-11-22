@@ -84,8 +84,19 @@ public sealed class SecretViewModel : ViewModelBase, IDisposable
     public string Message
     {
         get => _message;
-        private set => SetProperty(ref _message, value);
+        private set
+        {
+            if (SetProperty(ref _message, value))
+            {
+                OnPropertyChanged(nameof(HasMessage));
+            }
+        }
     }
+
+    /// <summary>
+    /// True while a status line exists, so the view can leave no space for it otherwise.
+    /// </summary>
+    public bool HasMessage => !string.IsNullOrEmpty(_message);
 
     /// <summary>
     /// Selects the entry that Reveal and Copy work on. Changing the entry hides everything.

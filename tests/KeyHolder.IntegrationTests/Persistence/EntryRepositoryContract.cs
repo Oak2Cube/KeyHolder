@@ -119,6 +119,24 @@ public abstract class EntryRepositoryContract : IDisposable
     }
 
     [Fact]
+    public async Task SummariesReportWhichSecretFieldsAreSet()
+    {
+        var full = NewEntry("Full", "FAKE-pw", "FAKE note");
+        var titleOnly = VaultEntry.Create(new EntryMetadata("Only Title"), EntrySecret.Empty, T0);
+        await Repository.AddAsync(full);
+        await Repository.AddAsync(titleOnly);
+
+        var summaries = await Repository.ListSummariesAsync();
+
+        var withSecrets = summaries.Single(summary => summary.Id == full.Id);
+        Assert.True(withSecrets.HasPassword);
+        Assert.True(withSecrets.HasNotes);
+        var withoutSecrets = summaries.Single(summary => summary.Id == titleOnly.Id);
+        Assert.False(withoutSecrets.HasPassword);
+        Assert.False(withoutSecrets.HasNotes);
+    }
+
+    [Fact]
     public async Task GetSecretReturnsOnlyTheRequestedEntrySecret()
     {
         var first = NewEntry("First", "FAKE-one");

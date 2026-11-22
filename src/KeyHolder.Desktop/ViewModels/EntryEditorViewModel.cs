@@ -128,7 +128,7 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     }
 
     /// <summary>
-    /// d-tags (data type, for example Email or Account), separated by commas.
+    /// d-tags (Record type, for example Email or Account), separated by commas.
     /// </summary>
     public string DTagsText
     {
@@ -137,7 +137,7 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     }
 
     /// <summary>
-    /// s-tags (security category, for example Finance or Sensitive), separated by commas.
+    /// s-tags (Security category, for example Finance or Sensitive), separated by commas.
     /// </summary>
     public string STagsText
     {

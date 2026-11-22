@@ -22,8 +22,8 @@ All other fields are optional.
 There is no fixed list of tags.
 The user can set any string values on each entry.
 
-- **d-tags (Data Tags):** describe the type of data, for example `Email`, `Account`, `Phone number`.
-- **s-tags (Security Tags):** describe the category or risk of the data, for example `Finance`, `Sensitive`, `Location`.
+- **Record type (d-tags):** describe the type of data, for example `Email`, `Account`, `Phone number`.
+- **Security category (s-tags):** describe the category or risk of the data, for example `Finance`, `Sensitive`, `Location`.
 
 ### Importance
 
