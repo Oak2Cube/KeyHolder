@@ -86,7 +86,7 @@
     </Window.Resources>
 
     <!-- A 1 px frame around the whole window, in the same color as the cards. -->
-    <Border BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1">
+    <Border BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="3">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

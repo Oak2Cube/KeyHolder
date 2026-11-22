@@ -24,6 +24,14 @@
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,8,0,0" />
         </Style>
+
+        <!-- Same vertical gap for every radio and checkbox in the left-panel expanders. -->
+        <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="Margin" Value="0,3" />
+        </Style>
+        <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
+            <Setter Property="Margin" Value="0,3" />
+        </Style>
         <Style x:Key="DetailGroup" TargetType="GroupBox">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
@@ -139,22 +147,22 @@
                         </StackPanel>
                     </Expander>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="SORT BY" />
-                    <StackPanel Orientation="Horizontal">
-                        <RadioButton Content="Name"
-                                     GroupName="Sort"
-                                     IsChecked="{Binding SortKey, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static q:SortKey.Name}}" />
-                        <RadioButton Content="Date"
-                                     GroupName="Sort"
-                                     IsChecked="{Binding SortKey, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static q:SortKey.Date}}" />
-                        <RadioButton Content="Importance"
-                                     GroupName="Sort"
-                                     IsChecked="{Binding SortKey, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static q:SortKey.Importance}}" />
-                    </StackPanel>
-                    <CheckBox Margin="0,6,0,0"
-                              Content="Descending"
-                              IsChecked="{Binding IsSortDescending}"
-                              ToolTip="Entries without importance always come last" />
+                    <Expander Header="Sort by" ToolTip="Sort the entry list">
+                        <StackPanel Margin="4,6,0,0">
+                            <RadioButton Content="Name"
+                                         GroupName="Sort"
+                                         IsChecked="{Binding SortKey, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static q:SortKey.Name}}" />
+                            <RadioButton Content="Date"
+                                         GroupName="Sort"
+                                         IsChecked="{Binding SortKey, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static q:SortKey.Date}}" />
+                            <RadioButton Content="Importance"
+                                         GroupName="Sort"
+                                         IsChecked="{Binding SortKey, Converter={StaticResource EnumEquals}, ConverterParameter={x:Static q:SortKey.Importance}}" />
+                            <CheckBox Content="Descending"
+                                      IsChecked="{Binding IsSortDescending}"
+                                      ToolTip="Entries without importance always come last" />
+                        </StackPanel>
+                    </Expander>
 
                     <Expander Header="Filter by tags">
                         <StackPanel Margin="4,6,0,0">
