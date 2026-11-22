@@ -30,8 +30,40 @@ public sealed class EntryListItemViewModel
 
     public string STagsText => string.Join(", ", Summary.Metadata.STags);
 
+    /// <summary>
+    /// The d-tags as separate values, shown as chips in the detail pane.
+    /// </summary>
+    public IReadOnlyList<string> DTagList => Summary.Metadata.DTags;
+
+    /// <summary>
+    /// The s-tags as separate values, shown as chips in the detail pane.
+    /// </summary>
+    public IReadOnlyList<string> STagList => Summary.Metadata.STags;
+
     public string ImportanceText =>
         Summary.Metadata.Importance?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+
+    // The detail pane hides fields without a value (and tag groups without tags).
+    public bool HasUsername => !string.IsNullOrWhiteSpace(Username);
+
+    public bool HasEmail => !string.IsNullOrWhiteSpace(Email);
+
+    public bool HasUrl => !string.IsNullOrWhiteSpace(Url);
+
+    public bool HasDTags => Summary.Metadata.DTags.Count > 0;
+
+    public bool HasSTags => Summary.Metadata.STags.Count > 0;
+
+    public bool HasImportance => Summary.Metadata.Importance is not null;
+
+    public bool HasPassword => Summary.HasPassword;
+
+    public bool HasNotes => Summary.HasNotes;
+
+    /// <summary>
+    /// The Deep access level group is shown only when there is a password or notes.
+    /// </summary>
+    public bool HasSecretFields => HasPassword || HasNotes;
 
     /// <summary>
     /// The second line in the list: username, or e-mail when there is no username.

@@ -34,5 +34,9 @@ public sealed record VaultEntry(
             now);
     }
 
-    public EntrySummary ToSummary() => new(Id, Metadata, CreatedAt, UpdatedAt);
+    public EntrySummary ToSummary() => new(Id, Metadata, CreatedAt, UpdatedAt)
+    {
+        HasPassword = !string.IsNullOrEmpty(Secret.Password),
+        HasNotes = !string.IsNullOrEmpty(Secret.Notes),
+    };
 }

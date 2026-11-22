@@ -36,7 +36,7 @@ entry
     username
     email
     url
-    d-tags                ← Data Tags (type of data)
+    d-tags                ← Record type
     s-tags                ← Security Tags (category / risk)
     importance            ← optional number for sort
   secret_envelope

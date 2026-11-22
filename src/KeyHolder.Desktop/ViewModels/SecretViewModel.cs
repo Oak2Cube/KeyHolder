@@ -50,6 +50,10 @@ public sealed class SecretViewModel : ViewModelBase, IDisposable
             () => CopyPasswordAsync(),
             () => _entryId is not null,
             ReportError);
+        CopyNotesCommand = new AsyncRelayCommand(
+            () => CopyNotesAsync(),
+            () => _entryId is not null,
+            ReportError);
     }
 
     public AsyncRelayCommand RevealPasswordCommand { get; }
@@ -57,6 +61,8 @@ public sealed class SecretViewModel : ViewModelBase, IDisposable
     public AsyncRelayCommand RevealNotesCommand { get; }
 
     public AsyncRelayCommand CopyPasswordCommand { get; }
+
+    public AsyncRelayCommand CopyNotesCommand { get; }
 
     /// <summary>
     /// The fixed placeholder, or the real password while a Reveal is active.
@@ -78,8 +84,19 @@ public sealed class SecretViewModel : ViewModelBase, IDisposable
     public string Message
     {
         get => _message;
-        private set => SetProperty(ref _message, value);
+        private set
+        {
+            if (SetProperty(ref _message, value))
+            {
+                OnPropertyChanged(nameof(HasMessage));
+            }
+        }
     }
+
+    /// <summary>
+    /// True while a status line exists, so the view can leave no space for it otherwise.
+    /// </summary>
+    public bool HasMessage => !string.IsNullOrEmpty(_message);
 
     /// <summary>
     /// Selects the entry that Reveal and Copy work on. Changing the entry hides everything.
@@ -175,6 +192,24 @@ public sealed class SecretViewModel : ViewModelBase, IDisposable
 
         _clipboard.SetSecret(secret.Password, ClipboardTimeout);
         Message = $"Password copied. The clipboard is cleared in {ClipboardTimeout.TotalSeconds:0} seconds.";
+    }
+
+    private async Task CopyNotesAsync()
+    {
+        var secret = await LoadSelectedSecretAsync();
+        if (secret is null)
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(secret.Notes))
+        {
+            Message = "This entry has no notes to copy.";
+            return;
+        }
+
+        _clipboard.SetSecret(secret.Notes, ClipboardTimeout);
+        Message = $"Notes copied. The clipboard is cleared in {ClipboardTimeout.TotalSeconds:0} seconds.";
     }
 
     /// <summary>

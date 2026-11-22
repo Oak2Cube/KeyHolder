@@ -25,10 +25,10 @@
         <TextBlock Style="{StaticResource EditorLabel}" Text="URL" />
         <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" />
 
-        <TextBlock Style="{StaticResource EditorLabel}" Text="d-tags: type of data, separated by commas (for example Email, Account)" />
+        <TextBlock Style="{StaticResource EditorLabel}" Text="Record type, separated by commas (for example Email, Account)" />
         <TextBox Text="{Binding DTagsText, UpdateSourceTrigger=PropertyChanged}" />
 
-        <TextBlock Style="{StaticResource EditorLabel}" Text="s-tags: security category, separated by commas (for example Finance, Sensitive)" />
+        <TextBlock Style="{StaticResource EditorLabel}" Text="Security category, separated by commas (for example Finance, Sensitive)" />
         <TextBox Text="{Binding STagsText, UpdateSourceTrigger=PropertyChanged}" />
 
         <TextBlock Style="{StaticResource EditorLabel}" Text="Importance (optional whole number, 0 to 100)" />

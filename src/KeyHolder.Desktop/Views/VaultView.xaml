@@ -10,7 +10,7 @@
 
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontSize" Value="16" />
             <Setter Property="Margin" Value="0,10,0,3" />
         </Style>
 
@@ -24,6 +24,59 @@
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,8,0,0" />
         </Style>
+        <Style x:Key="DetailGroup" TargetType="GroupBox">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushColor}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,12,0,0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <!-- Header starts at x=0, the same x as the group's left border and the field labels. -->
+                    <ControlTemplate TargetType="GroupBox">
+                        <StackPanel>
+                            <ContentPresenter ContentSource="Header"
+                                              Margin="0,0,0,4"
+                                              HorizontalAlignment="Left"
+                                              RecognizesAccessKey="True" />
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter />
+                            </Border>
+                        </StackPanel>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Hide is shown in the same golden color as the warning messages. -->
+        <Style x:Key="RevealButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Content, RelativeSource={RelativeSource Self}}" Value="Hide">
+                    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="TagChip">
+            <Border Margin="0,0,6,6"
+                    Padding="8,3"
+                    Background="{StaticResource HoverBrush}"
+                    BorderBrush="{StaticResource BorderBrushColor}"
+                    BorderThickness="1"
+                    CornerRadius="10">
+                <TextBlock FontSize="13" Foreground="{StaticResource PrimaryTextBrush}" Text="{Binding}" />
+            </Border>
+        </DataTemplate>
+
+        <ItemsPanelTemplate x:Key="TagPanel">
+            <WrapPanel />
+        </ItemsPanelTemplate>
     </UserControl.Resources>
 
     <Grid Margin="16">
@@ -68,7 +121,7 @@
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Searches only the fields chosen below. Several words must all match." />
 
-                    <Expander Header="{Binding SearchOptions.Summary}" ToolTip="Choose 1 to 6 fields to search in">
+                    <Expander Header="Search parameters" ToolTip="Choose 1 to 6 fields to search in">
                         <StackPanel Margin="4,6,0,0">
                             <TextBlock Foreground="{StaticResource SecondaryTextBrush}"
                                        FontSize="11"
@@ -107,7 +160,7 @@
                         <StackPanel Margin="4,6,0,0">
                             <TextBlock Foreground="{StaticResource SecondaryTextBrush}"
                                        FontSize="11"
-                                       Text="d-tags (type of data)" />
+                                       Text="Record type" />
                             <ItemsControl ItemsSource="{Binding DTagFilters}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -119,7 +172,7 @@
                             <TextBlock Margin="0,8,0,0"
                                        Foreground="{StaticResource SecondaryTextBrush}"
                                        FontSize="11"
-                                       Text="s-tags (security category)" />
+                                       Text="Security category" />
                             <ItemsControl ItemsSource="{Binding STagFilters}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
@@ -192,68 +245,131 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding IsViewing, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
-                        <TextBlock FontSize="24"
-                                   FontWeight="SemiBold"
-                                   Text="{Binding SelectedEntry.Title}"
-                                   TextWrapping="Wrap" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Username" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Username}" />
+                            <!-- Left column: the title and the fields directly below it.
+                                 Its height does not depend on the "Last changed" block. -->
+                            <StackPanel Grid.Column="0">
+                                <TextBlock FontSize="24"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding SelectedEntry.Title}"
+                                           TextWrapping="Wrap" />
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Email" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Email}" />
+                                <StackPanel Visibility="{Binding SelectedEntry.HasUsername, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Username" />
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Username}" />
+                                </StackPanel>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="URL" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Url}" />
+                                <StackPanel Visibility="{Binding SelectedEntry.HasEmail, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Email" />
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Email}" />
+                                </StackPanel>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="d-tags (type of data)" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.DTagsText}" />
+                                <StackPanel Visibility="{Binding SelectedEntry.HasUrl, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Text="URL" />
+                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Url}" />
+                                </StackPanel>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="s-tags (security category)" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.STagsText}" />
+                                <!-- Chips carry a 6 px bottom margin, so the bottom padding is 2 to keep the
+                                     gap to the border equal to the top gap (8). -->
+                                <GroupBox Style="{StaticResource DetailGroup}"
+                                          Padding="12,8,12,2"
+                                          Header="Record type"
+                                          Visibility="{Binding SelectedEntry.HasDTags, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl ItemTemplate="{StaticResource TagChip}"
+                                                  ItemsPanel="{StaticResource TagPanel}"
+                                                  ItemsSource="{Binding SelectedEntry.DTagList}" />
+                                </GroupBox>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Importance" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.ImportanceText}" />
+                                <GroupBox Style="{StaticResource DetailGroup}"
+                                          Padding="12,8,12,2"
+                                          Header="Security category"
+                                          Visibility="{Binding SelectedEntry.HasSTags, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl ItemTemplate="{StaticResource TagChip}"
+                                                  ItemsPanel="{StaticResource TagPanel}"
+                                                  ItemsSource="{Binding SelectedEntry.STagList}" />
+                                </GroupBox>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Password" />
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock MinWidth="160"
-                                       Margin="0,0,12,0"
-                                       VerticalAlignment="Center"
-                                       FontFamily="Consolas"
-                                       FontSize="15"
-                                       Text="{Binding Secret.PasswordDisplay}" />
-                            <Button Command="{Binding Secret.RevealPasswordCommand}"
-                                    Content="{Binding Secret.RevealPasswordLabel}" />
-                            <Button Command="{Binding Secret.CopyPasswordCommand}" Content="Copy" />
-                        </StackPanel>
+                                <TextBlock Margin="0,16,0,0"
+                                           FontSize="16"
+                                           Visibility="{Binding SelectedEntry.HasImportance, Converter={StaticResource BoolToVisibility}}">
+                                    <Run Foreground="{StaticResource SecondaryTextBrush}" Text="Importance: " />
+                                    <Run Text="{Binding SelectedEntry.ImportanceText, Mode=OneWay}" />
+                                </TextBlock>
+                            </StackPanel>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Notes" />
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock MinWidth="160"
-                                       MaxWidth="360"
-                                       Margin="0,0,12,0"
-                                       VerticalAlignment="Center"
-                                       Text="{Binding Secret.NotesDisplay}"
-                                       TextWrapping="Wrap" />
-                            <Button Command="{Binding Secret.RevealNotesCommand}"
-                                    Content="{Binding Secret.RevealNotesLabel}" />
-                        </StackPanel>
+                            <!-- Right column: "Last changed", its value, and Edit/Delete. All start at the
+                                 left border of the Edit button. -->
+                            <StackPanel Grid.Column="1"
+                                        Margin="24,0,0,0"
+                                        HorizontalAlignment="Right"
+                                        VerticalAlignment="Top">
+                                <TextBlock Style="{StaticResource FieldLabel}"
+                                           Margin="0,4,0,3"
+                                           HorizontalAlignment="Left"
+                                           Text="Last changed" />
+                                <TextBlock Style="{StaticResource FieldValue}"
+                                           HorizontalAlignment="Left"
+                                           Text="{Binding SelectedEntry.UpdatedText}" />
 
-                        <TextBlock Margin="0,8,0,0"
-                                   Foreground="{StaticResource WarningBrush}"
-                                   Text="{Binding Secret.Message}"
-                                   TextWrapping="Wrap" />
+                                <StackPanel Margin="0,12,0,0" HorizontalAlignment="Left" Orientation="Horizontal">
+                                    <Button Command="{Binding EditCommand}" Content="Edit" />
+                                    <Button Command="{Binding DeleteCommand}"
+                                            Content="Delete"
+                                            Style="{StaticResource DangerButton}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
 
-                        <TextBlock Style="{StaticResource FieldLabel}" Text="Last changed" />
-                        <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.UpdatedText}" />
+                        <GroupBox Style="{StaticResource DetailGroup}"
+                                  Header="Deep access level"
+                                  Visibility="{Binding SelectedEntry.HasSecretFields, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel>
+                                <!-- Password and notes rows appear only when they have a value. -->
+                                <StackPanel Margin="0,0,0,10" Visibility="{Binding SelectedEntry.HasPassword, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,3" Text="Password" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock MinWidth="160"
+                                                   Margin="0,0,12,0"
+                                                   VerticalAlignment="Center"
+                                                   FontFamily="Consolas"
+                                                   FontSize="15"
+                                                   Text="{Binding Secret.PasswordDisplay}" />
+                                        <Button Style="{StaticResource RevealButton}"
+                                                Command="{Binding Secret.RevealPasswordCommand}"
+                                                Content="{Binding Secret.RevealPasswordLabel}" />
+                                        <Button Command="{Binding Secret.CopyPasswordCommand}" Content="Copy" />
+                                    </StackPanel>
+                                </StackPanel>
 
-                        <StackPanel Margin="0,24,0,0" Orientation="Horizontal">
-                            <Button Command="{Binding EditCommand}" Content="Edit" />
-                            <Button Command="{Binding DeleteCommand}"
-                                    Content="Delete"
-                                    Style="{StaticResource DangerButton}" />
-                        </StackPanel>
+                                <StackPanel Visibility="{Binding SelectedEntry.HasNotes, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,3" Text="Notes" />
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock MinWidth="160"
+                                                   MaxWidth="360"
+                                                   Margin="0,0,12,0"
+                                                   VerticalAlignment="Center"
+                                                   Text="{Binding Secret.NotesDisplay}"
+                                                   TextWrapping="Wrap" />
+                                        <Button Style="{StaticResource RevealButton}"
+                                                Command="{Binding Secret.RevealNotesCommand}"
+                                                Content="{Binding Secret.RevealNotesLabel}" />
+                                        <Button Command="{Binding Secret.CopyNotesCommand}" Content="Copy" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <!-- The message takes space only while it has text. -->
+                                <TextBlock Margin="0,8,0,0"
+                                           Foreground="{StaticResource WarningBrush}"
+                                           Text="{Binding Secret.Message}"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding Secret.HasMessage, Converter={StaticResource BoolToVisibility}}" />
+                            </StackPanel>
+                        </GroupBox>
                     </StackPanel>
                 </ScrollViewer>
 

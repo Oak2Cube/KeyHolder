@@ -48,7 +48,7 @@ Build:
 Use obviously fake credentials.
 Hide storage behind interfaces so the UI does not accidentally define the crypto format.
 
-`d-tags` are Data Tags (type of data, for example Email, Account).
+`d-tags` are Record type (for example Email, Account).
 `s-tags` are Security Tags (category/risk, for example Finance, Sensitive).
 Both are free string lists per entry.
 `importance` is an optional number used for sort.

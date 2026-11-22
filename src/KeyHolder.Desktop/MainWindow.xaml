@@ -4,8 +4,10 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:views="clr-namespace:KeyHolder.Desktop.Views"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="KeyHolder"
+        WindowStyle="None"
         Width="1100"
         Height="720"
         MinWidth="900"
@@ -14,19 +16,126 @@
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource PrimaryTextBrush}"
         TextOptions.TextFormattingMode="Display">
+    <!-- Custom title bar: the window keeps the resize border and the drag, double-click, and snap behavior. -->
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="0"
+                            CornerRadius="0" />
+    </shell:WindowChrome.WindowChrome>
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- Caption buttons use the app palette. They are hit-test visible in the chrome so they stay clickable. -->
+        <Style x:Key="CaptionButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="36" />
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Cursor" Value="Arrow" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource HoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource BorderBrushColor}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CloseCaptionButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource DangerBrush}" />
+                                <Setter Property="Foreground" Value="#07111F" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource DangerBrush}" />
+                                <Setter Property="Opacity" Value="0.8" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
+    <!-- A 1 px frame around the whole window, in the same color as the cards. -->
+    <Border BorderBrush="{StaticResource BorderBrushColor}" BorderThickness="1">
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Fake-data warning, always visible. -->
+        <!-- Title bar: app name on the left, caption buttons on the right. -->
         <Border Grid.Row="0"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushColor}"
+                BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Margin="14,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="13"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource PrimaryTextBrush}"
+                           Text="KeyHolder" />
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Style="{StaticResource CaptionButton}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="OnMinimizeClick"
+                            Content="&#xE921;"
+                            ToolTip="Minimize" />
+                    <Button x:Name="MaximizeButton"
+                            Style="{StaticResource CaptionButton}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="OnMaximizeRestoreClick"
+                            Content="&#xE922;"
+                            ToolTip="Maximize" />
+                    <Button Style="{StaticResource CloseCaptionButton}"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="OnCloseClick"
+                            Content="&#xE8BB;"
+                            ToolTip="Close" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Fake-data warning, always visible. -->
+        <Border Grid.Row="1"
                 Padding="16,8"
                 Background="#3B2F0B"
                 BorderBrush="{StaticResource WarningBrush}"
@@ -50,15 +159,15 @@
             </Grid>
         </Border>
 
-        <views:LockedView Grid.Row="1"
+        <views:LockedView Grid.Row="2"
                           Visibility="{Binding IsLocked, Converter={StaticResource BoolToVisibility}}" />
 
-        <views:VaultView Grid.Row="1"
+        <views:VaultView Grid.Row="2"
                          DataContext="{Binding Vault}"
                          Visibility="{Binding DataContext.IsUnlocked, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibility}}" />
 
         <!-- Status bar: message on the left, entry count and replica dirty state on the right. -->
-        <Border Grid.Row="2"
+        <Border Grid.Row="3"
                 Padding="16,6"
                 Background="{StaticResource CardBackgroundBrush}"
                 BorderBrush="{StaticResource BorderBrushColor}"
@@ -93,4 +202,5 @@
             </Grid>
         </Border>
     </Grid>
+    </Border>
 </Window>

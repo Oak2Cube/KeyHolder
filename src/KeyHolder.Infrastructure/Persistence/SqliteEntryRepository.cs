@@ -11,12 +11,15 @@ namespace KeyHolder.Infrastructure.Persistence;
 /// SQLite storage for the working vault. All SQL is parameterized.
 /// Every successful change runs in one transaction that also sets
 /// <c>replica_state.local_changed_since_replica</c>, so the dirty flag and the data never disagree.
-/// Only <see cref="GetSecretAsync"/> and <see cref="GetAsync"/> read the <c>password</c> and <c>notes</c> columns.
+/// Only <see cref="GetSecretAsync"/> and <see cref="GetAsync"/> return the <c>password</c> and <c>notes</c> values.
+/// The summary queries only check whether those columns are set.
 /// </summary>
 public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, IFakeDataStore
 {
     private const string SummaryColumns =
-        "id, title, username, email, url, d_tags, s_tags, importance, created_at, updated_at";
+        "id, title, username, email, url, d_tags, s_tags, importance, created_at, updated_at, " +
+        "(password IS NOT NULL AND password <> '') AS has_password, " +
+        "(notes IS NOT NULL AND notes <> '') AS has_notes";
 
     private readonly SqliteConnectionFactory _connections;
 
@@ -78,7 +81,7 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         }
 
         var summary = ReadSummary(reader);
-        return new VaultEntry(summary.Id, summary.Metadata, ReadSecret(reader, 10), summary.CreatedAt, summary.UpdatedAt);
+        return new VaultEntry(summary.Id, summary.Metadata, ReadSecret(reader, 12), summary.CreatedAt, summary.UpdatedAt);
     }
 
     public async Task AddAsync(VaultEntry entry, CancellationToken cancellationToken = default)
@@ -321,7 +324,11 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
             Guid.Parse(reader.GetString(0)),
             metadata,
             ParseTime(reader.GetString(8)),
-            ParseTime(reader.GetString(9)));
+            ParseTime(reader.GetString(9)))
+        {
+            HasPassword = reader.GetInt32(10) != 0,
+            HasNotes = reader.GetInt32(11) != 0,
+        };
     }
 
     private static EntrySecret ReadSecret(DbDataReader reader, int firstColumn) =>

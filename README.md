@@ -27,7 +27,7 @@ entry
     username
     email
     url
-    d-tags                ← Data Tags (type of data)
+    d-tags                ← Record type
     s-tags                ← Security Tags (category / risk)
     importance            ← optional number for sort
   secret_envelope
@@ -59,7 +59,7 @@ Click Reveal or Copy
         ↓
 Decrypt selected entry's secret envelope temporarily
         ↓
-Display briefly or place password on clipboard
+Display briefly or place password or notes on clipboard
         ↓
 Hide display and clear temporary value
         ↓
@@ -125,7 +125,7 @@ What works in Milestone 1:
 - search in 1 to 6 chosen fields, filter by d-tags and s-tags, sort by name, date, or importance
 - a random password generator in the editor
 - idle (5 minutes) and Windows-session locking; locking clears the list, search, editor draft, revealed values, and the app's clipboard value
-- the password always shows `••••••••`; Reveal (10 s) and Copy (20 s clipboard timeout) read only the selected entry's secret on demand
+- the password always shows `••••••••`; Reveal (10 s) and Copy (20 s clipboard timeout) read only the selected entry's secret on demand; the notes have their own Reveal and Copy buttons with the same timing
 - a status-bar indicator for changes since the last replica export (the export itself arrives in Milestone 3)
 
 The demo data is created once. To start over, close the app and delete `%LOCALAPPDATA%\KeyHolder\working.sqlite`.
@@ -139,7 +139,7 @@ The demo data is created once. To start over, close the app and delete `%LOCALAP
 5. Search for `bank`; open **Search in** and add d-tags or s-tags to search them; the last checked field cannot be unchecked.
 6. Filter by an s-tag such as `Finance`, add a d-tag, then **Clear filters**.
 7. Sort by Name, Date, and Importance, with and without **Descending**.
-8. Select an entry: the password shows `••••••••`. **Reveal** shows it for about 10 seconds; **Copy** puts it on the clipboard, which clears after about 20 seconds.
+8. Select an entry: the password shows `••••••••`. **Reveal** shows it for about 10 seconds; **Copy** puts it on the clipboard, which clears after about 20 seconds. The notes row has the same **Reveal** and **Copy** buttons.
 9. Press **Lock**, then Unlock: the search box, selection, and revealed values are gone.
 10. Unlock and wait 5 minutes without touching the mouse or keyboard, or press `Win+L`: the vault is locked when you return.
 
