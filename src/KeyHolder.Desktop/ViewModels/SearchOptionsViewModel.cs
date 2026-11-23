@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using KeyHolder.Desktop.Mvvm;
 using KeyHolder.Domain.Query;
 
@@ -59,6 +60,7 @@ public sealed class SearchFieldOptionViewModel : ViewModelBase
 public sealed class SearchOptionsViewModel : ViewModelBase
 {
     private SearchFieldSelection _selection = SearchFieldSelection.Default;
+    private bool _isResetting;
 
     public SearchOptionsViewModel()
     {
@@ -71,6 +73,7 @@ public sealed class SearchOptionsViewModel : ViewModelBase
             Create(SearchField.DTags, "d-tags (data)"),
             Create(SearchField.STags, "s-tags (security)"),
         ];
+        ResetCommand = new RelayCommand(Reset);
     }
 
     public event EventHandler? SelectionChanged;
@@ -78,6 +81,10 @@ public sealed class SearchOptionsViewModel : ViewModelBase
     public IReadOnlyList<SearchFieldOptionViewModel> Options { get; }
 
     public SearchFieldSelection Selection => _selection;
+
+    public ICommand ResetCommand { get; }
+
+    public bool IsNonDefault => Options.Any(option => option.IsSelected != SearchFieldSelection.Default.Contains(option.Field));
 
     public int SelectedCount => Options.Count(option => option.IsSelected);
 
@@ -103,6 +110,39 @@ public sealed class SearchOptionsViewModel : ViewModelBase
 
         OnPropertyChanged(nameof(Selection));
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(IsNonDefault));
+        if (!_isResetting)
+        {
+            SelectionChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void Reset()
+    {
+        if (!IsNonDefault)
+        {
+            return;
+        }
+
+        _isResetting = true;
+        try
+        {
+            // Select default fields first so there is always at least one selected field.
+            foreach (var option in Options.Where(option => SearchFieldSelection.Default.Contains(option.Field)))
+            {
+                option.IsSelected = true;
+            }
+
+            foreach (var option in Options.Where(option => !SearchFieldSelection.Default.Contains(option.Field)))
+            {
+                option.IsSelected = false;
+            }
+        }
+        finally
+        {
+            _isResetting = false;
+        }
+
         SelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
