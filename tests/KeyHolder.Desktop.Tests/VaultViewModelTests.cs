@@ -6,15 +6,16 @@ namespace KeyHolder.Desktop.Tests;
 public sealed class VaultViewModelTests
 {
     [Fact]
-    public async Task LoadShowsAllSeededEntriesSortedByName()
+    public async Task LoadShowsAllSeededEntriesSortedByImportanceDescending()
     {
         var harness = await Harness.CreateAsync();
 
         await harness.Vault.LoadAsync();
 
         Assert.Equal(10, harness.Vault.Entries.Count);
-        var titles = harness.Vault.Entries.Select(entry => entry.Title).ToList();
-        Assert.Equal(titles.Order(StringComparer.OrdinalIgnoreCase), titles);
+        var importances = harness.Vault.Entries.Select(entry => entry.Summary.Metadata.Importance).ToList();
+        Assert.Equal(importances.OrderBy(value => value is null).ThenByDescending(value => value), importances);
+        Assert.False(harness.Vault.IsSortNonDefault);
         Assert.Equal("10 of 10 entries", harness.Vault.EntryCountText);
     }
 
@@ -92,6 +93,25 @@ public sealed class VaultViewModelTests
         Assert.Equal(10, importances[0]);
         Assert.Equal(9, importances[1]);
         Assert.Equal([null, null, null], importances.TakeLast(3));
+    }
+
+    [Fact]
+    public async Task ResetSortRestoresDefaultsAndReordersEntries()
+    {
+        var harness = await Harness.CreateAsync();
+        await harness.Vault.LoadAsync();
+        harness.Vault.SortKey = SortKey.Name;
+        harness.Vault.IsSortDescending = false;
+        Assert.True(harness.Vault.IsSortNonDefault);
+
+        harness.Vault.ResetSortCommand.Execute(null);
+
+        Assert.Equal(SortKey.Importance, harness.Vault.SortKey);
+        Assert.True(harness.Vault.IsSortDescending);
+        Assert.False(harness.Vault.IsSortNonDefault);
+        Assert.Equal("Fake Bank", harness.Vault.Entries.First().Title);
+        harness.Vault.IsSortDescending = false;
+        Assert.True(harness.Vault.IsSortNonDefault);
     }
 
     [Fact]

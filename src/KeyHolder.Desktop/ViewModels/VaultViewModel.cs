@@ -28,8 +28,8 @@ public sealed class VaultViewModel : ViewModelBase
     private EntryListItemViewModel? _selectedEntry;
     private EntryEditorViewModel? _editor;
     private string _searchText = string.Empty;
-    private SortKey _sortKey = SortKey.Name;
-    private bool _isSortDescending;
+    private SortKey _sortKey = SortKey.Importance;
+    private bool _isSortDescending = true;
     private string _statusMessage = string.Empty;
     private string _entryCountText = string.Empty;
     private string _dirtyText = string.Empty;
@@ -64,6 +64,7 @@ public sealed class VaultViewModel : ViewModelBase
         EditCommand = new AsyncRelayCommand(StartEditAsync, () => SelectedEntry is not null && Editor is null, ReportError);
         DeleteCommand = new AsyncRelayCommand(DeleteAsync, () => SelectedEntry is not null && Editor is null, ReportError);
         ClearFiltersCommand = new RelayCommand(ClearFilters);
+        ResetSortCommand = new RelayCommand(ResetSort);
     }
 
     public ObservableCollection<EntryListItemViewModel> Entries { get; } = [];
@@ -83,6 +84,8 @@ public sealed class VaultViewModel : ViewModelBase
     public ICommand DeleteCommand { get; }
 
     public ICommand ClearFiltersCommand { get; }
+
+    public ICommand ResetSortCommand { get; }
 
     public EntryListItemViewModel? SelectedEntry
     {
@@ -139,6 +142,7 @@ public sealed class VaultViewModel : ViewModelBase
         {
             if (SetProperty(ref _sortKey, value))
             {
+                OnPropertyChanged(nameof(IsSortNonDefault));
                 ApplyQuery();
             }
         }
@@ -151,6 +155,7 @@ public sealed class VaultViewModel : ViewModelBase
         {
             if (SetProperty(ref _isSortDescending, value))
             {
+                OnPropertyChanged(nameof(IsSortNonDefault));
                 ApplyQuery();
             }
         }
@@ -158,6 +163,8 @@ public sealed class VaultViewModel : ViewModelBase
 
     public bool HasActiveFilters =>
         DTagFilters.Any(tag => tag.IsSelected) || STagFilters.Any(tag => tag.IsSelected);
+
+    public bool IsSortNonDefault => SortKey != SortKey.Importance || !IsSortDescending;
 
     public string StatusMessage
     {
@@ -325,6 +332,22 @@ public sealed class VaultViewModel : ViewModelBase
 
         await LoadAsync();
         StatusMessage = deleted ? $"Deleted \"{selected.Title}\"." : "The entry was already deleted.";
+    }
+
+    private void ResetSort()
+    {
+        _isRebuilding = true;
+        try
+        {
+            SortKey = SortKey.Importance;
+            IsSortDescending = true;
+        }
+        finally
+        {
+            _isRebuilding = false;
+        }
+
+        ApplyQuery();
     }
 
     private void ClearFilters()

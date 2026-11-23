@@ -19,6 +19,22 @@
             <Setter Property="FontSize" Value="14" />
         </Style>
 
+        <Style x:Key="SelectableFieldValue" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <Style x:Key="ParameterResetButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+            <Setter Property="Margin" Value="8,6,0,0" />
+            <Setter Property="Padding" Value="8,0" />
+        </Style>
+
         <Style x:Key="ErrorText" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
             <Setter Property="TextWrapping" Value="Wrap" />
@@ -129,7 +145,13 @@
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              ToolTip="Searches only the fields chosen below. Several words must all match." />
 
-                    <Expander Header="Search parameters" ToolTip="Choose 1 to 6 fields to search in">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                    <Expander ToolTip="Choose 1 to 6 fields to search in">
+                        <Expander.Header><TextBlock Height="24" VerticalAlignment="Center" Text="Search parameters" /></Expander.Header>
                         <StackPanel Margin="4,6,0,0">
                             <TextBlock Foreground="{StaticResource SecondaryTextBrush}"
                                        FontSize="11"
@@ -146,8 +168,18 @@
                             </ItemsControl>
                         </StackPanel>
                     </Expander>
+                        <Button Grid.Column="1" Style="{StaticResource ParameterResetButton}"
+                                Command="{Binding SearchOptions.ResetCommand}" Content="Default"
+                                Visibility="{Binding SearchOptions.IsNonDefault, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
 
-                    <Expander Header="Sort by" ToolTip="Sort the entry list">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                    <Expander ToolTip="Sort the entry list">
+                        <Expander.Header><TextBlock Height="24" VerticalAlignment="Center" Text="Sort parameters" /></Expander.Header>
                         <StackPanel Margin="4,6,0,0">
                             <RadioButton Content="Name"
                                          GroupName="Sort"
@@ -163,8 +195,18 @@
                                       ToolTip="Entries without importance always come last" />
                         </StackPanel>
                     </Expander>
+                        <Button Grid.Column="1" Style="{StaticResource ParameterResetButton}"
+                                Command="{Binding ResetSortCommand}" Content="Default"
+                                Visibility="{Binding IsSortNonDefault, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
 
-                    <Expander Header="Filter by tags">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                    <Expander>
+                        <Expander.Header><TextBlock Height="24" VerticalAlignment="Center" Text="Filter by tags" /></Expander.Header>
                         <StackPanel Margin="4,6,0,0">
                             <TextBlock Foreground="{StaticResource SecondaryTextBrush}"
                                        FontSize="11"
@@ -189,13 +231,12 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
 
-                            <Button Margin="0,8,0,0"
-                                    HorizontalAlignment="Left"
-                                    Command="{Binding ClearFiltersCommand}"
-                                    Content="Clear filters"
-                                    Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </Expander>
+                        <Button Grid.Column="1" Style="{StaticResource ParameterResetButton}"
+                                Command="{Binding ClearFiltersCommand}" Content="Clear"
+                                Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}" />
+                    </Grid>
 
                     <TextBlock Style="{StaticResource SectionLabel}" Text="{Binding EntryCountText}" />
                 </StackPanel>
@@ -269,17 +310,17 @@
 
                                 <StackPanel Visibility="{Binding SelectedEntry.HasUsername, Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Username" />
-                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Username}" />
+                                    <TextBox Style="{StaticResource SelectableFieldValue}" Text="{Binding SelectedEntry.Username, Mode=OneWay}" />
                                 </StackPanel>
 
                                 <StackPanel Visibility="{Binding SelectedEntry.HasEmail, Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Email" />
-                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Email}" />
+                                    <TextBox Style="{StaticResource SelectableFieldValue}" Text="{Binding SelectedEntry.Email, Mode=OneWay}" />
                                 </StackPanel>
 
                                 <StackPanel Visibility="{Binding SelectedEntry.HasUrl, Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="URL" />
-                                    <TextBlock Style="{StaticResource FieldValue}" Text="{Binding SelectedEntry.Url}" />
+                                    <TextBox Style="{StaticResource SelectableFieldValue}" Text="{Binding SelectedEntry.Url, Mode=OneWay}" />
                                 </StackPanel>
 
                                 <!-- Chips carry a 6 px bottom margin, so the bottom padding is 2 to keep the
