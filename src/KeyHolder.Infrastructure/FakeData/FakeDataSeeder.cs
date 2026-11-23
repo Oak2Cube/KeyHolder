@@ -1,5 +1,6 @@
 using KeyHolder.Domain.Entries;
 using KeyHolder.Domain.Locking;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Infrastructure.FakeData;
 
@@ -26,7 +27,18 @@ public sealed class FakeDataSeeder
     /// </summary>
     /// <returns><see langword="true"/> when entries were added.</returns>
     public Task<bool> SeedIfNeededAsync(CancellationToken cancellationToken = default) =>
-        _store.SeedOnceAsync(CreateEntries(_clock.UtcNow), cancellationToken);
+        _store.SeedOnceAsync(CreateEntries(_clock.UtcNow), CreateTagColors(), cancellationToken);
+
+    /// <summary>
+    /// Demo tag colors, so a new vault shows colored tags right away.
+    /// </summary>
+    public static IReadOnlyList<TagColorAssignment> CreateTagColors() =>
+    [
+        new(TagKind.Data, "Email", TagColor.Blue),
+        new(TagKind.Data, "Account", TagColor.Teal),
+        new(TagKind.Security, "Sensitive", TagColor.Red),
+        new(TagKind.Security, "Finance", TagColor.Green),
+    ];
 
     /// <summary>
     /// The demo entries. Update times are spread over several days so Date sorting is visible.

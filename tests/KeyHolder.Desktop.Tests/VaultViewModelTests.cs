@@ -202,14 +202,15 @@ public sealed class VaultViewModelTests
         Assert.NotNull(editor);
         Assert.True(harness.Vault.IsEditing);
         editor.Title = "Fake Brand New";
-        editor.DTagsText = "Account, account, Email";
+        TagEditorHelpers.AddTag(editor.DTags, "Account");
+        TagEditorHelpers.AddTag(editor.DTags, "Email");
         editor.ImportanceText = "42";
         editor.SaveCommand.Execute(null);
 
         Assert.Null(harness.Vault.Editor);
         Assert.Equal(11, harness.Vault.Entries.Count);
         Assert.Equal("Fake Brand New", harness.Vault.SelectedEntry?.Title);
-        Assert.Equal("Account, Email", harness.Vault.SelectedEntry?.DTagsText);
+        Assert.Equal(["Account", "Email"], harness.Vault.SelectedEntry?.DTagList.Select(tag => tag.Name));
         Assert.Equal("42", harness.Vault.SelectedEntry?.ImportanceText);
         Assert.True(harness.Vault.IsDirty);
     }

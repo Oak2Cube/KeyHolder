@@ -4,6 +4,7 @@ using KeyHolder.Desktop.Services;
 using KeyHolder.Desktop.ViewModels;
 using KeyHolder.Domain.Entries;
 using KeyHolder.Domain.Locking;
+using KeyHolder.Domain.Tags;
 using KeyHolder.Infrastructure.FakeData;
 using KeyHolder.Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,6 +71,7 @@ public partial class App : Application
         services.AddSingleton<SchemaMigrator>();
         services.AddSingleton<SqliteEntryRepository>();
         services.AddSingleton<IEntryRepository>(sp => sp.GetRequiredService<SqliteEntryRepository>());
+        services.AddSingleton<ITagColorStore>(sp => sp.GetRequiredService<SqliteEntryRepository>());
         services.AddSingleton<IVaultStateStore>(sp => sp.GetRequiredService<SqliteEntryRepository>());
         services.AddSingleton<IFakeDataStore>(sp => sp.GetRequiredService<SqliteEntryRepository>());
         services.AddSingleton<FakeDataSeeder>();

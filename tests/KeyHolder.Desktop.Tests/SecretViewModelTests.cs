@@ -1,5 +1,6 @@
 using KeyHolder.Desktop.ViewModels;
 using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Desktop.Tests;
 
@@ -186,16 +187,20 @@ public sealed class SecretViewModelTests
             return inner.GetAsync(id, cancellationToken);
         }
 
-        public Task AddAsync(VaultEntry entry, CancellationToken cancellationToken = default) =>
-            inner.AddAsync(entry, cancellationToken);
+        public Task AddAsync(
+            VaultEntry entry,
+            IReadOnlyCollection<TagColorAssignment>? tagColors = null,
+            CancellationToken cancellationToken = default) =>
+            inner.AddAsync(entry, tagColors, cancellationToken);
 
         public Task<bool> UpdateAsync(
             Guid id,
             EntryMetadata metadata,
             EntrySecret? newSecret,
             DateTimeOffset now,
+            IReadOnlyCollection<TagColorAssignment>? tagColors = null,
             CancellationToken cancellationToken = default) =>
-            inner.UpdateAsync(id, metadata, newSecret, now, cancellationToken);
+            inner.UpdateAsync(id, metadata, newSecret, now, tagColors, cancellationToken);
 
         public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
             inner.DeleteAsync(id, cancellationToken);

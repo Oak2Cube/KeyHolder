@@ -16,6 +16,9 @@ Store entries in SQLite with **plain columns in two groups**:
 - secret group: `password`, `notes`, `secret_revision`
 
 Tags are JSON text arrays.
+Tag colors live in a separate table, `tag_color` (migration 2): one row per vault, list (`d` or `s`), and case-insensitive name key, with a fixed color name.
+Tags without a color have no row. Colors are saved in the same transaction as the entry that sets them.
+Tag colors are metadata, so Milestone 2 moves them into the metadata envelope scope.
 Schema versions use `PRAGMA user_version` with transactional, ordered migrations.
 The UI only sees `IEntryRepository`, and list reads return summaries without the secret group.
 `GetSecretAsync` reads the secret group of exactly one entry.

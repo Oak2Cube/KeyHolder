@@ -4,9 +4,11 @@ using System.Windows.Input;
 using KeyHolder.Cryptography;
 using KeyHolder.Desktop.Mvvm;
 using KeyHolder.Desktop.Services;
+using KeyHolder.Desktop.Tags;
 using KeyHolder.Domain.Entries;
 using KeyHolder.Domain.Locking;
 using KeyHolder.Domain.Query;
+using KeyHolder.Domain.Tags;
 using SortKey = KeyHolder.Domain.Query.SortKey;
 
 namespace KeyHolder.Desktop.ViewModels;
@@ -18,12 +20,14 @@ namespace KeyHolder.Desktop.ViewModels;
 public sealed class VaultViewModel : ViewModelBase
 {
     private readonly IEntryRepository _repository;
+    private readonly ITagColorStore _tagColors;
     private readonly IVaultStateStore _state;
     private readonly IClock _clock;
     private readonly IPasswordGenerator _generator;
     private readonly IDialogService _dialogs;
 
     private IReadOnlyList<EntrySummary> _summaries = [];
+    private TagCatalog _catalog = TagCatalog.Empty;
     private bool _isRebuilding;
     private EntryListItemViewModel? _selectedEntry;
     private EntryEditorViewModel? _editor;
@@ -37,6 +41,7 @@ public sealed class VaultViewModel : ViewModelBase
 
     public VaultViewModel(
         IEntryRepository repository,
+        ITagColorStore tagColors,
         IVaultStateStore state,
         IClock clock,
         IPasswordGenerator generator,
@@ -44,6 +49,7 @@ public sealed class VaultViewModel : ViewModelBase
         SecretViewModel secret)
     {
         ArgumentNullException.ThrowIfNull(repository);
+        ArgumentNullException.ThrowIfNull(tagColors);
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(generator);
@@ -51,6 +57,7 @@ public sealed class VaultViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(secret);
 
         _repository = repository;
+        _tagColors = tagColors;
         _state = state;
         _clock = clock;
         _generator = generator;
@@ -199,6 +206,7 @@ public sealed class VaultViewModel : ViewModelBase
     public async Task LoadAsync(Guid? selectId = null)
     {
         _summaries = await _repository.ListSummariesAsync();
+        _catalog = TagCatalog.Create(_summaries, await _tagColors.ListTagColorsAsync());
         var dirty = await _state.GetLocalChangedSinceReplicaAsync();
 
         IsDirty = dirty;
@@ -226,6 +234,7 @@ public sealed class VaultViewModel : ViewModelBase
             _editor = null;
             _selectedEntry = null;
             _summaries = [];
+            _catalog = TagCatalog.Empty;
             _searchText = string.Empty;
             Entries.Clear();
             DTagFilters.Clear();
@@ -257,7 +266,7 @@ public sealed class VaultViewModel : ViewModelBase
     private void StartNew()
     {
         Secret.Clear();
-        OpenEditor(EntryEditorViewModel.CreateNew(_repository, _clock, _generator));
+        OpenEditor(EntryEditorViewModel.CreateNew(_repository, _clock, _generator, _catalog));
     }
 
     private async Task StartEditAsync()
@@ -270,7 +279,12 @@ public sealed class VaultViewModel : ViewModelBase
         Secret.Clear();
         Secret.SetEntry(selected.Id);
 
-        var editor = await EntryEditorViewModel.CreateForEditAsync(_repository, _clock, _generator, selected.Summary);
+        var editor = await EntryEditorViewModel.CreateForEditAsync(
+            _repository,
+            _clock,
+            _generator,
+            _catalog,
+            selected.Summary);
         OpenEditor(editor);
     }
 
@@ -378,8 +392,8 @@ public sealed class VaultViewModel : ViewModelBase
         _isRebuilding = true;
         try
         {
-            Replace(DTagFilters, dTags, selectedD);
-            Replace(STagFilters, sTags, selectedS);
+            Replace(DTagFilters, TagKind.Data, dTags, selectedD);
+            Replace(STagFilters, TagKind.Security, sTags, selectedS);
         }
         finally
         {
@@ -389,13 +403,15 @@ public sealed class VaultViewModel : ViewModelBase
 
     private void Replace(
         ObservableCollection<TagFilterItemViewModel> target,
+        TagKind kind,
         IReadOnlyList<string> tags,
         HashSet<string> selected)
     {
         target.Clear();
         foreach (var tag in tags)
         {
-            target.Add(new TagFilterItemViewModel(tag, selected.Contains(tag), OnTagFilterChanged));
+            var brush = _catalog.GetDisplay(kind, tag).Brush;
+            target.Add(new TagFilterItemViewModel(tag, brush, selected.Contains(tag), OnTagFilterChanged));
         }
     }
 
@@ -436,7 +452,7 @@ public sealed class VaultViewModel : ViewModelBase
             Entries.Clear();
             foreach (var summary in result)
             {
-                var item = new EntryListItemViewModel(summary);
+                var item = new EntryListItemViewModel(summary, _catalog);
                 Entries.Add(item);
                 if (summary.Id == selectedId)
                 {

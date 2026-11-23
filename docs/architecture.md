@@ -25,6 +25,10 @@ The user can set any string values on each entry.
 - **Record type (d-tags):** describe the type of data, for example `Email`, `Account`, `Phone number`.
 - **Security category (s-tags):** describe the category or risk of the data, for example `Finance`, `Sensitive`, `Location`.
 
+A tag is one short text (at most 50 characters, no commas or semicolons, no case-insensitive duplicates in one list).
+Each tag name can have one display color from a fixed palette. The color is shared by all entries and kept per list (a `Finance` d-tag and a `Finance` s-tag can differ).
+Tag colors are metadata: they belong to the `metadata_envelope` scope and are encrypted with the metadata key.
+
 ### Importance
 
 `importance` is an optional number on an entry.

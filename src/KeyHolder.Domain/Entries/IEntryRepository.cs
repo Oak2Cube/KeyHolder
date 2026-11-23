@@ -1,3 +1,5 @@
+using KeyHolder.Domain.Tags;
+
 namespace KeyHolder.Domain.Entries;
 
 /// <summary>
@@ -27,14 +29,18 @@ public interface IEntryRepository
     Task<VaultEntry?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a new entry.
+    /// Adds a new entry. Tag colors, when given, are saved in the same transaction.
     /// </summary>
     /// <exception cref="EntryValidationException">The entry is invalid.</exception>
-    Task AddAsync(VaultEntry entry, CancellationToken cancellationToken = default);
+    Task AddAsync(
+        VaultEntry entry,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Replaces the metadata of an entry. The secret is replaced only when <paramref name="newSecret"/> is not
     /// <see langword="null"/>; otherwise the stored secret stays unchanged.
+    /// Tag colors, when given, are saved in the same transaction (only when the entry exists).
     /// </summary>
     /// <returns><see langword="false"/> when the entry does not exist.</returns>
     /// <exception cref="EntryValidationException">The metadata or secret is invalid.</exception>
@@ -43,6 +49,7 @@ public interface IEntryRepository
         EntryMetadata metadata,
         EntrySecret? newSecret,
         DateTimeOffset now,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>

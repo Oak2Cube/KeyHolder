@@ -3,8 +3,10 @@ using System.ComponentModel;
 using System.Globalization;
 using KeyHolder.Cryptography;
 using KeyHolder.Desktop.Mvvm;
+using KeyHolder.Desktop.Tags;
 using KeyHolder.Domain.Entries;
 using KeyHolder.Domain.Locking;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Desktop.ViewModels;
 
@@ -42,8 +44,6 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     private string _username = string.Empty;
     private string _email = string.Empty;
     private string _url = string.Empty;
-    private string _dTagsText = string.Empty;
-    private string _sTagsText = string.Empty;
     private string _importanceText = string.Empty;
     private string _password = string.Empty;
     private string _notes = string.Empty;
@@ -57,12 +57,26 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
         IEntryRepository repository,
         IClock clock,
         IPasswordGenerator generator,
+        TagCatalog catalog,
         EntrySummary? existing,
         EntrySecret? existingSecret)
     {
         _repository = repository;
         _clock = clock;
         _generator = generator;
+
+        DTags = new TagListEditorViewModel(
+            TagKind.Data,
+            "Record type",
+            existing?.Metadata.DTags ?? [],
+            catalog);
+        STags = new TagListEditorViewModel(
+            TagKind.Security,
+            "Security category",
+            existing?.Metadata.STags ?? [],
+            catalog);
+        DTags.Changed += OnTagsChanged;
+        STags.Changed += OnTagsChanged;
 
         if (existing is not null)
         {
@@ -72,8 +86,6 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
             _username = metadata.Username ?? string.Empty;
             _email = metadata.Email ?? string.Empty;
             _url = metadata.Url ?? string.Empty;
-            _dTagsText = string.Join(", ", metadata.DTags);
-            _sTagsText = string.Join(", ", metadata.STags);
             _importanceText = metadata.Importance?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
             _existingPassword = existingSecret?.Password;
             _originalNotes = existingSecret?.Notes;
@@ -128,22 +140,14 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     }
 
     /// <summary>
-    /// d-tags (Record type, for example Email or Account), separated by commas.
+    /// d-tags (Record type, for example Email or Account), edited with "+" and "-".
     /// </summary>
-    public string DTagsText
-    {
-        get => _dTagsText;
-        set => SetValidated(ref _dTagsText, value);
-    }
+    public TagListEditorViewModel DTags { get; }
 
     /// <summary>
-    /// s-tags (Security category, for example Finance or Sensitive), separated by commas.
+    /// s-tags (Security category, for example Finance or Sensitive), edited with "+" and "-".
     /// </summary>
-    public string STagsText
-    {
-        get => _sTagsText;
-        set => SetValidated(ref _sTagsText, value);
-    }
+    public TagListEditorViewModel STags { get; }
 
     public string ImportanceText
     {
@@ -209,13 +213,15 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     public static EntryEditorViewModel CreateNew(
         IEntryRepository repository,
         IClock clock,
-        IPasswordGenerator generator)
+        IPasswordGenerator generator,
+        TagCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(generator);
+        ArgumentNullException.ThrowIfNull(catalog);
 
-        return new EntryEditorViewModel(repository, clock, generator, existing: null, existingSecret: null);
+        return new EntryEditorViewModel(repository, clock, generator, catalog, existing: null, existingSecret: null);
     }
 
     /// <summary>
@@ -226,15 +232,17 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
         IEntryRepository repository,
         IClock clock,
         IPasswordGenerator generator,
+        TagCatalog catalog,
         EntrySummary entry)
     {
         ArgumentNullException.ThrowIfNull(repository);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(generator);
+        ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(entry);
 
         var secret = await repository.GetSecretAsync(entry.Id);
-        return new EntryEditorViewModel(repository, clock, generator, entry, secret);
+        return new EntryEditorViewModel(repository, clock, generator, catalog, entry, secret);
     }
 
     public IEnumerable GetErrors(string? propertyName) =>
@@ -268,13 +276,20 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
             return;
         }
 
+        if (DTags.IsAdding || STags.IsAdding)
+        {
+            ErrorMessage = "Finish adding the tag with OK, or cancel it, before saving.";
+            return;
+        }
+
         var metadata = EntryValidator.Normalize(BuildMetadata(out _));
         var now = _clock.UtcNow;
+        TagColorAssignment[] tagColors = [.. DTags.StagedColors, .. STags.StagedColors];
 
         if (_entryId is null)
         {
             var entry = VaultEntry.Create(metadata, new EntrySecret(Password, Notes), now);
-            await _repository.AddAsync(entry);
+            await _repository.AddAsync(entry, tagColors);
             Finish(entry.Id);
             return;
         }
@@ -287,7 +302,7 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
             ? new EntrySecret(string.IsNullOrEmpty(Password) ? _existingPassword : Password, Notes)
             : null;
 
-        if (await _repository.UpdateAsync(_entryId.Value, metadata, newSecret, now))
+        if (await _repository.UpdateAsync(_entryId.Value, metadata, newSecret, now, tagColors))
         {
             Finish(_entryId.Value);
         }
@@ -352,13 +367,16 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
             Username,
             Email,
             Url,
-            SplitTags(DTagsText),
-            SplitTags(STagsText),
+            DTags.Names,
+            STags.Names,
             importance);
     }
 
-    private static string[] SplitTags(string text) =>
-        text.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    private void OnTagsChanged(object? sender, EventArgs e)
+    {
+        ErrorMessage = string.Empty;
+        Validate();
+    }
 
     private void Validate()
     {
@@ -409,8 +427,8 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
 
     private static string MapField(string field) => field switch
     {
-        EntryFields.DTags => nameof(DTagsText),
-        EntryFields.STags => nameof(STagsText),
+        EntryFields.DTags => nameof(DTags),
+        EntryFields.STags => nameof(STags),
         EntryFields.Importance => nameof(ImportanceText),
         _ => field,
     };

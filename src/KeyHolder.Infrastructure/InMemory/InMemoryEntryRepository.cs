@@ -1,4 +1,5 @@
 using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 using KeyHolder.Infrastructure.FakeData;
 
 namespace KeyHolder.Infrastructure.InMemory;
@@ -7,10 +8,11 @@ namespace KeyHolder.Infrastructure.InMemory;
 /// Thread-safe in-memory repository. It behaves like the SQLite repository and is used for contract tests
 /// and design-time previews.
 /// </summary>
-public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore, IFakeDataStore
+public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore, IFakeDataStore, ITagColorStore
 {
     private readonly object _gate = new();
     private readonly Dictionary<Guid, VaultEntry> _entries = [];
+    private readonly Dictionary<(TagKind Kind, string Key), TagColorAssignment> _tagColors = [];
     private bool _dirty;
     private bool _seeded;
 
@@ -47,7 +49,18 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
         }
     }
 
-    public Task AddAsync(VaultEntry entry, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<TagColorAssignment>> ListTagColorsAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult<IReadOnlyList<TagColorAssignment>>([.. _tagColors.Values]);
+        }
+    }
+
+    public Task AddAsync(
+        VaultEntry entry,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -56,6 +69,7 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
             Metadata = EntryValidator.EnsureValid(entry.Metadata),
             Secret = EntryValidator.EnsureValid(entry.Secret),
         };
+        var colors = TagColorAssignments.Normalize(tagColors);
 
         lock (_gate)
         {
@@ -64,6 +78,7 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
                 throw new InvalidOperationException("An entry with this id already exists.");
             }
 
+            SaveTagColors(colors);
             _dirty = true;
         }
 
@@ -75,12 +90,14 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
         EntryMetadata metadata,
         EntrySecret? newSecret,
         DateTimeOffset now,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(metadata);
 
         var normalizedMetadata = EntryValidator.EnsureValid(metadata);
         var normalizedSecret = newSecret is null ? null : EntryValidator.EnsureValid(newSecret);
+        var colors = TagColorAssignments.Normalize(tagColors);
 
         lock (_gate)
         {
@@ -95,6 +112,7 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
                 Secret = normalizedSecret ?? existing.Secret,
                 UpdatedAt = now,
             };
+            SaveTagColors(colors);
             _dirty = true;
             return Task.FromResult(true);
         }
@@ -120,9 +138,12 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
 
     public Task<bool> SeedOnceAsync(
         IReadOnlyList<VaultEntry> entries,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
+
+        var colors = TagColorAssignments.Normalize(tagColors);
 
         lock (_gate)
         {
@@ -140,8 +161,26 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
                 };
             }
 
+            SaveTagColors(colors);
             _seeded = true;
             return Task.FromResult(true);
+        }
+    }
+
+    // Must be called inside the lock.
+    private void SaveTagColors(IReadOnlyList<TagColorAssignment> colors)
+    {
+        foreach (var assignment in colors)
+        {
+            var key = (assignment.Kind, TagColors.KeyOf(assignment.Name));
+            if (assignment.Color == TagColor.Default)
+            {
+                _tagColors.Remove(key);
+            }
+            else
+            {
+                _tagColors[key] = assignment;
+            }
         }
     }
 }

@@ -87,6 +87,7 @@ internal sealed class Harness
         harness.Vault = new VaultViewModel(
             harness.Repository,
             harness.Repository,
+            harness.Repository,
             harness.Clock,
             new PasswordGenerator(),
             harness.Dialogs,

@@ -8,6 +8,133 @@
             <Setter Property="FontSize" Value="12" />
             <Setter Property="Margin" Value="0,10,0,3" />
         </Style>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <!-- A small text-only button, used for "Cancel" inside the tag add panel. -->
+        <Style x:Key="LinkButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <TextBlock x:Name="Text"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   Text="{TemplateBinding Content}" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Text" Property="TextDecorations" Value="Underline" />
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Small square "+" and "-" buttons. -->
+        <Style x:Key="TagIconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- One tag list: label, tags with "-", the add panel, and "+". Used for both tag lists. -->
+        <DataTemplate x:Key="TagListEditorTemplate">
+            <StackPanel>
+                <TextBlock Style="{StaticResource EditorLabel}" Text="{Binding Title}" />
+
+                <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,2" Orientation="Horizontal">
+                                <Button Content="-"
+                                        Command="{Binding RemoveCommand}"
+                                        Style="{StaticResource TagIconButton}"
+                                        ToolTip="Remove this tag" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="{Binding Brush}"
+                                           Text="{Binding Name}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Margin="0,6,0,0"
+                        Padding="10"
+                        Background="{StaticResource InputBackgroundBrush}"
+                        BorderBrush="{StaticResource BorderBrushColor}"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Visibility="{Binding IsAdding, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <StackPanel Visibility="{Binding HasExistingTags, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource EditorLabel}"
+                                       Margin="0,0,0,3"
+                                       Text="Choose an existing tag" />
+                            <ComboBox ItemsSource="{Binding ExistingTags}" SelectedItem="{Binding SelectedExisting}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Foreground="{Binding Brush}" Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource EditorLabel}" Text="New tag name" />
+                        <TextBox IsVisibleChanged="OnTagNameVisibleChanged"
+                                 Text="{Binding NewName, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Return" Command="{Binding OkCommand}" />
+                                <KeyBinding Key="Escape" Command="{Binding CancelAddCommand}" />
+                            </TextBox.InputBindings>
+                        </TextBox>
+                        <TextBlock Margin="0,3,0,0"
+                                   FontSize="11"
+                                   Foreground="{StaticResource DangerBrush}"
+                                   Text="{Binding NewNameError}"
+                                   TextWrapping="Wrap"
+                                   Visibility="{Binding HasNewNameError, Converter={StaticResource BoolToVisibility}}" />
+
+                        <TextBlock Style="{StaticResource EditorLabel}" Text="Color" />
+                        <ComboBox ItemsSource="{Binding Colors}" SelectedItem="{Binding SelectedColor}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="12"
+                                                 Height="12"
+                                                 Margin="0,0,8,0"
+                                                 VerticalAlignment="Center"
+                                                 Fill="{Binding Brush}" />
+                                        <TextBlock Foreground="{Binding Brush}" Text="{Binding Name}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <StackPanel Margin="0,12,0,0" Orientation="Horizontal">
+                            <Button Command="{Binding OkCommand}"
+                                    Content="OK"
+                                    Style="{StaticResource PrimaryButton}" />
+                            <Button Command="{Binding CancelAddCommand}"
+                                    Content="Cancel"
+                                    Style="{StaticResource LinkButton}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Button Margin="0,6,0,0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding AddCommand}"
+                        Content="+"
+                        Style="{StaticResource TagIconButton}"
+                        ToolTip="Add a tag"
+                        Visibility="{Binding ShowAddButton, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <StackPanel MaxWidth="560" HorizontalAlignment="Left">
@@ -25,11 +152,9 @@
         <TextBlock Style="{StaticResource EditorLabel}" Text="URL" />
         <TextBox Text="{Binding Url, UpdateSourceTrigger=PropertyChanged}" />
 
-        <TextBlock Style="{StaticResource EditorLabel}" Text="Record type, separated by commas (for example Email, Account)" />
-        <TextBox Text="{Binding DTagsText, UpdateSourceTrigger=PropertyChanged}" />
+        <ContentControl Content="{Binding DTags}" ContentTemplate="{StaticResource TagListEditorTemplate}" IsTabStop="False" />
 
-        <TextBlock Style="{StaticResource EditorLabel}" Text="Security category, separated by commas (for example Finance, Sensitive)" />
-        <TextBox Text="{Binding STagsText, UpdateSourceTrigger=PropertyChanged}" />
+        <ContentControl Content="{Binding STags}" ContentTemplate="{StaticResource TagListEditorTemplate}" IsTabStop="False" />
 
         <TextBlock Style="{StaticResource EditorLabel}" Text="Importance (optional whole number, 0 to 100)" />
         <TextBox Width="120"

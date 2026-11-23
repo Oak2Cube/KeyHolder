@@ -1,3 +1,4 @@
+using System.Windows.Media;
 using KeyHolder.Desktop.Mvvm;
 
 namespace KeyHolder.Desktop.ViewModels;
@@ -9,14 +10,20 @@ public sealed class TagFilterItemViewModel : ViewModelBase
 {
     private bool _isSelected;
 
-    public TagFilterItemViewModel(string name, bool isSelected, EventHandler selectionChanged)
+    public TagFilterItemViewModel(string name, Brush brush, bool isSelected, EventHandler selectionChanged)
     {
         Name = name;
+        Brush = brush;
         _isSelected = isSelected;
         SelectionChanged = selectionChanged;
     }
 
     public string Name { get; }
+
+    /// <summary>
+    /// The tag color, used as the text color of the checkbox label.
+    /// </summary>
+    public Brush Brush { get; }
 
     public bool IsSelected
     {

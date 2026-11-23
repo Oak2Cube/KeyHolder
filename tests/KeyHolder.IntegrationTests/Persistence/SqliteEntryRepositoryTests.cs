@@ -1,5 +1,6 @@
 using KeyHolder.Domain.Entries;
 using KeyHolder.Domain.Locking;
+using KeyHolder.Domain.Tags;
 using KeyHolder.Infrastructure.FakeData;
 using KeyHolder.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
@@ -117,6 +118,68 @@ public sealed class SqliteEntryRepositoryTests : EntryRepositoryContract
     }
 
     [Fact]
+    public async Task FailedChangeRollsBackTheTagColorsToo()
+    {
+        var repository = _vault.CreateMigratedRepository();
+        await repository.AddAsync(
+            VaultEntry.Create(new EntryMetadata("Existing"), EntrySecret.Empty, T0),
+            [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+        using (var connection = _vault.CreateFactory().Open())
+        {
+            using var trigger = connection.CreateCommand();
+            trigger.CommandText = """
+                CREATE TRIGGER fail_dirty BEFORE UPDATE ON replica_state
+                BEGIN
+                    SELECT RAISE(ABORT, 'injected failure');
+                END;
+                """;
+            trigger.ExecuteNonQuery();
+        }
+
+        await Assert.ThrowsAsync<SqliteException>(
+            () => repository.AddAsync(
+                VaultEntry.Create(new EntryMetadata("Never stored"), EntrySecret.Empty, T0),
+                [new TagColorAssignment(TagKind.Data, "Email", TagColor.Red), new TagColorAssignment(TagKind.Data, "New", TagColor.Green)]));
+
+        var colors = await repository.ListTagColorsAsync();
+        var kept = Assert.Single(colors);
+        Assert.Equal(TagColor.Blue, kept.Color);
+        Assert.Single(await repository.ListSummariesAsync());
+    }
+
+    [Fact]
+    public async Task TagColorsSurviveRestart()
+    {
+        var firstRun = _vault.CreateMigratedRepository();
+        await firstRun.AddAsync(
+            VaultEntry.Create(new EntryMetadata("A"), EntrySecret.Empty, T0),
+            [new TagColorAssignment(TagKind.Security, "Sensitive", TagColor.Red)]);
+
+        var secondRun = _vault.CreateMigratedRepository();
+
+        Assert.Equal(
+            [new TagColorAssignment(TagKind.Security, "Sensitive", TagColor.Red)],
+            await secondRun.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task UnknownStoredColorFallsBackToDefaultAndIsNotListed()
+    {
+        var repository = _vault.CreateMigratedRepository();
+        using (var connection = _vault.CreateFactory().Open())
+        {
+            using var command = connection.CreateCommand();
+            command.CommandText = """
+                INSERT INTO tag_color (vault_id, kind, name_key, name, color)
+                SELECT id, 'd', 'EMAIL', 'Email', 'Chartreuse' FROM vault
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        Assert.Empty(await repository.ListTagColorsAsync());
+    }
+
+    [Fact]
     public async Task FailedUpdateKeepsTheOldValues()
     {
         var repository = _vault.CreateMigratedRepository();
@@ -149,16 +212,20 @@ public sealed class SqliteEntryRepositoryTests : EntryRepositoryContract
     {
         var repository = _vault.CreateMigratedRepository();
         const string Nasty = "'); DROP TABLE entry; --";
+
+        // Tags cannot contain ";" (it was the old separator), so they get a different injection attempt.
+        const string NastyTag = "') OR 1=1 --";
         var entry = VaultEntry.Create(
-            new EntryMetadata(Nasty, DTags: [Nasty]),
+            new EntryMetadata(Nasty, DTags: [NastyTag]),
             new EntrySecret(Nasty, Nasty),
             T0);
 
-        await repository.AddAsync(entry);
+        await repository.AddAsync(entry, [new TagColorAssignment(TagKind.Data, NastyTag, TagColor.Red)]);
 
         var loaded = await repository.GetAsync(entry.Id);
         Assert.Equal(Nasty, loaded?.Metadata.Title);
-        Assert.Equal([Nasty], loaded?.Metadata.DTags);
+        Assert.Equal([NastyTag], loaded?.Metadata.DTags);
+        Assert.Equal(NastyTag, Assert.Single(await repository.ListTagColorsAsync()).Name);
         Assert.Equal(Nasty, loaded?.Secret.Password);
     }
 

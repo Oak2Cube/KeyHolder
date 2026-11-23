@@ -1,4 +1,5 @@
 using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Infrastructure.FakeData;
 
@@ -9,8 +10,11 @@ public interface IFakeDataStore
 {
     /// <summary>
     /// Adds the entries only if fake data was never added before.
-    /// The seeded marker is saved in the same transaction. This does not set the dirty state.
+    /// The tag colors and the seeded marker are saved in the same transaction. This does not set the dirty state.
     /// </summary>
     /// <returns><see langword="true"/> when the entries were added.</returns>
-    Task<bool> SeedOnceAsync(IReadOnlyList<VaultEntry> entries, CancellationToken cancellationToken = default);
+    Task<bool> SeedOnceAsync(
+        IReadOnlyList<VaultEntry> entries,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
+        CancellationToken cancellationToken = default);
 }

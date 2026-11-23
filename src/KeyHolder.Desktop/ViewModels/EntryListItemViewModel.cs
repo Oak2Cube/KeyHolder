@@ -1,5 +1,7 @@
 using System.Globalization;
+using KeyHolder.Desktop.Tags;
 using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Desktop.ViewModels;
 
@@ -8,10 +10,14 @@ namespace KeyHolder.Desktop.ViewModels;
 /// </summary>
 public sealed class EntryListItemViewModel
 {
-    public EntryListItemViewModel(EntrySummary summary)
+    public EntryListItemViewModel(EntrySummary summary, TagCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(summary);
+        ArgumentNullException.ThrowIfNull(catalog);
+
         Summary = summary;
+        DTagList = catalog.GetDisplays(TagKind.Data, summary.Metadata.DTags);
+        STagList = catalog.GetDisplays(TagKind.Security, summary.Metadata.STags);
     }
 
     public EntrySummary Summary { get; }
@@ -26,19 +32,15 @@ public sealed class EntryListItemViewModel
 
     public string Url => Summary.Metadata.Url ?? string.Empty;
 
-    public string DTagsText => string.Join(", ", Summary.Metadata.DTags);
-
-    public string STagsText => string.Join(", ", Summary.Metadata.STags);
+    /// <summary>
+    /// The d-tags with their colors, shown in the list line and as chips in the detail pane.
+    /// </summary>
+    public IReadOnlyList<TagDisplay> DTagList { get; }
 
     /// <summary>
-    /// The d-tags as separate values, shown as chips in the detail pane.
+    /// The s-tags with their colors, shown as chips in the detail pane.
     /// </summary>
-    public IReadOnlyList<string> DTagList => Summary.Metadata.DTags;
-
-    /// <summary>
-    /// The s-tags as separate values, shown as chips in the detail pane.
-    /// </summary>
-    public IReadOnlyList<string> STagList => Summary.Metadata.STags;
+    public IReadOnlyList<TagDisplay> STagList { get; }
 
     public string ImportanceText =>
         Summary.Metadata.Importance?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;

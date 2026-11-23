@@ -121,14 +121,71 @@ public static class EntryValidator
 
         foreach (var tag in tags)
         {
-            var trimmed = tag?.Trim();
-            if (!string.IsNullOrEmpty(trimmed) && seen.Add(trimmed))
+            var normalized = NormalizeTag(tag);
+            if (normalized.Length > 0 && seen.Add(normalized))
             {
-                result.Add(trimmed);
+                result.Add(normalized);
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Trims a single tag and collapses runs of white space inside it into one space.
+    /// </summary>
+    public static string NormalizeTag(string? tag) =>
+        tag is null
+            ? string.Empty
+            : string.Join(' ', tag.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+    /// <summary>
+    /// Checks one new tag against the tags already in the same list.
+    /// </summary>
+    /// <returns>A short message for the user, or <see langword="null"/> when the tag can be added.</returns>
+    public static string? ValidateNewTag(string? name, IReadOnlyCollection<string> existingTags)
+    {
+        ArgumentNullException.ThrowIfNull(existingTags);
+
+        var normalized = NormalizeTag(name);
+        if (normalized.Length == 0)
+        {
+            return "Enter a tag name.";
+        }
+
+        var nameError = TagNameError(normalized);
+        if (nameError is not null)
+        {
+            return nameError;
+        }
+
+        if (existingTags.Any(tag => string.Equals(NormalizeTag(tag), normalized, StringComparison.OrdinalIgnoreCase)))
+        {
+            return "This tag is already on the entry.";
+        }
+
+        return existingTags.Count >= EntryLimits.MaxTagsPerList
+            ? string.Create(CultureInfo.InvariantCulture, $"At most {EntryLimits.MaxTagsPerList} tags are allowed.")
+            : null;
+    }
+
+    private static string? TagNameError(string tag)
+    {
+        if (tag.Length > EntryLimits.MaxTagLength)
+        {
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"Each tag must be at most {EntryLimits.MaxTagLength} characters.");
+        }
+
+        if (tag.Any(char.IsControl))
+        {
+            return "A tag cannot contain control characters.";
+        }
+
+        return tag.Contains(',', StringComparison.Ordinal) || tag.Contains(';', StringComparison.Ordinal)
+            ? "A tag cannot contain commas or semicolons."
+            : null;
     }
 
     private static string? NormalizeOptional(string? value)
@@ -156,13 +213,9 @@ public static class EntryValidator
                 string.Create(CultureInfo.InvariantCulture, $"At most {EntryLimits.MaxTagsPerList} tags are allowed.")));
         }
 
-        if (tags.Any(tag => tag.Length > EntryLimits.MaxTagLength))
+        foreach (var message in tags.Select(TagNameError).Where(message => message is not null).Distinct())
         {
-            errors.Add(new ValidationError(
-                field,
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"Each tag must be at most {EntryLimits.MaxTagLength} characters.")));
+            errors.Add(new ValidationError(field, message!));
         }
     }
 }

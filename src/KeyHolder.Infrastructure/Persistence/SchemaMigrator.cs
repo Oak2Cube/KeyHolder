@@ -67,7 +67,8 @@ public sealed class SchemaMigrator
         _migrations = migrations;
     }
 
-    internal static IReadOnlyList<IMigration> DefaultMigrations { get; } = [new InitialSchemaMigration()];
+    internal static IReadOnlyList<IMigration> DefaultMigrations { get; } = 
+        [new InitialSchemaMigration(), new TagColorMigration()];
 
     /// <summary>
     /// The newest schema version this build understands.

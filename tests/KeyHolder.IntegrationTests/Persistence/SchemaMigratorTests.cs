@@ -24,6 +24,61 @@ public sealed class SchemaMigratorTests : IDisposable
     }
 
     [Fact]
+    public void TagColorTableIsCreatedByMigrationTwo()
+    {
+        var migrator = new SchemaMigrator(_vault.CreateFactory());
+
+        migrator.Migrate();
+
+        Assert.True(migrator.LatestVersion >= 2);
+        Assert.Contains("tag_color", TableNames(), StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public void VersionOneDatabaseUpgradesAndKeepsItsEntries()
+    {
+        new SchemaMigrator(_vault.CreateFactory(), [new InitialSchemaMigration()]).Migrate();
+        var vaultId = ReadVaultId();
+        using (var connection = _vault.CreateFactory().Open())
+        {
+            using var insert = connection.CreateCommand();
+            insert.CommandText = """
+                INSERT INTO entry (id, vault_id, title, d_tags, created_at, updated_at)
+                VALUES ('11111111-1111-1111-1111-111111111111', $vault, 'Old entry', '["Email"]', 'now', 'now')
+                """;
+            insert.Parameters.AddWithValue("$vault", vaultId);
+            insert.ExecuteNonQuery();
+        }
+
+        Assert.DoesNotContain("tag_color", TableNames(), StringComparer.Ordinal);
+
+        var migrator = new SchemaMigrator(_vault.CreateFactory());
+        migrator.Migrate();
+
+        Assert.Equal(migrator.LatestVersion, migrator.GetCurrentVersion());
+        Assert.Contains("tag_color", TableNames(), StringComparer.Ordinal);
+        Assert.Equal(1, CountRows("entry"));
+        Assert.Equal(0, CountRows("tag_color"));
+        Assert.Equal(vaultId, ReadVaultId());
+    }
+
+    [Fact]
+    public void TagColorTableRejectsAnUnknownKind()
+    {
+        new SchemaMigrator(_vault.CreateFactory()).Migrate();
+        var vaultId = ReadVaultId();
+        using var connection = _vault.CreateFactory().Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO tag_color (vault_id, kind, name_key, name, color)
+            VALUES ($vault, 'x', 'EMAIL', 'Email', 'Blue')
+            """;
+        command.Parameters.AddWithValue("$vault", vaultId);
+
+        Assert.Throws<SqliteException>(() => command.ExecuteNonQuery());
+    }
+
+    [Fact]
     public void MigratingTwiceKeepsTheSameVaultId()
     {
         var migrator = new SchemaMigrator(_vault.CreateFactory());

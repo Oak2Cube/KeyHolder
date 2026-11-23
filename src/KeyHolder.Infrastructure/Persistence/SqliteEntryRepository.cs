@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Globalization;
 using System.Text.Json;
 using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 using KeyHolder.Infrastructure.FakeData;
 using Microsoft.Data.Sqlite;
 
@@ -14,7 +15,7 @@ namespace KeyHolder.Infrastructure.Persistence;
 /// Only <see cref="GetSecretAsync"/> and <see cref="GetAsync"/> return the <c>password</c> and <c>notes</c> values.
 /// The summary queries only check whether those columns are set.
 /// </summary>
-public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, IFakeDataStore
+public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, IFakeDataStore, ITagColorStore
 {
     private const string SummaryColumns =
         "id, title, username, email, url, d_tags, s_tags, importance, created_at, updated_at, " +
@@ -84,18 +85,44 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         return new VaultEntry(summary.Id, summary.Metadata, ReadSecret(reader, 12), summary.CreatedAt, summary.UpdatedAt);
     }
 
-    public async Task AddAsync(VaultEntry entry, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<TagColorAssignment>> ListTagColorsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await _connections.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT kind, name, color FROM tag_color";
+
+        var result = new List<TagColorAssignment>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            var color = TagColors.Parse(reader.GetString(2));
+            if (TagColors.ParseKindCode(reader.GetString(0)) is { } kind && color != TagColor.Default)
+            {
+                result.Add(new TagColorAssignment(kind, reader.GetString(1), color));
+            }
+        }
+
+        return result;
+    }
+
+    public async Task AddAsync(
+        VaultEntry entry,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
         var metadata = EntryValidator.EnsureValid(entry.Metadata);
         var secret = EntryValidator.EnsureValid(entry.Secret);
+        var colors = TagColorAssignments.Normalize(tagColors);
 
         await InTransactionAsync(
             async (connection, transaction) =>
             {
                 var vaultId = await ReadVaultIdAsync(connection, transaction, cancellationToken);
                 await InsertEntryAsync(connection, transaction, vaultId, entry, metadata, secret, cancellationToken);
+                await SaveTagColorsAsync(connection, transaction, vaultId, colors, cancellationToken);
                 await MarkDirtyAsync(connection, transaction, cancellationToken);
                 return true;
             },
@@ -107,12 +134,14 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         EntryMetadata metadata,
         EntrySecret? newSecret,
         DateTimeOffset now,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(metadata);
 
         var normalizedMetadata = EntryValidator.EnsureValid(metadata);
         var normalizedSecret = newSecret is null ? null : EntryValidator.EnsureValid(newSecret);
+        var colors = TagColorAssignments.Normalize(tagColors);
 
         return InTransactionAsync(
             async (connection, transaction) =>
@@ -149,6 +178,8 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
                     return false;
                 }
 
+                var vaultId = await ReadVaultIdAsync(connection, transaction, cancellationToken);
+                await SaveTagColorsAsync(connection, transaction, vaultId, colors, cancellationToken);
                 await MarkDirtyAsync(connection, transaction, cancellationToken);
                 return true;
             },
@@ -186,9 +217,12 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
 
     public Task<bool> SeedOnceAsync(
         IReadOnlyList<VaultEntry> entries,
+        IReadOnlyCollection<TagColorAssignment>? tagColors = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entries);
+
+        var colors = TagColorAssignments.Normalize(tagColors);
 
         return InTransactionAsync(
             async (connection, transaction) =>
@@ -219,6 +253,8 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
                     var secret = EntryValidator.EnsureValid(entry.Secret);
                     await InsertEntryAsync(connection, transaction, vaultId, entry, metadata, secret, cancellationToken);
                 }
+
+                await SaveTagColorsAsync(connection, transaction, vaultId, colors, cancellationToken);
 
                 // Seeding is not a user change, so the dirty flag stays as it is.
                 await using var mark = connection.CreateCommand();
@@ -255,6 +291,39 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
 
         return await command.ExecuteScalarAsync(cancellationToken) as string
             ?? throw new InvalidOperationException("The vault row is missing.");
+    }
+
+    private static async Task SaveTagColorsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string vaultId,
+        IReadOnlyList<TagColorAssignment> colors,
+        CancellationToken cancellationToken)
+    {
+        foreach (var assignment in colors)
+        {
+            await using var command = connection.CreateCommand();
+            command.Transaction = transaction;
+
+            // Default means "no color", so the row is removed instead of storing a neutral color.
+            command.CommandText = assignment.Color == TagColor.Default
+                ? "DELETE FROM tag_color WHERE vault_id = $vaultId AND kind = $kind AND name_key = $key"
+                : """
+                    INSERT INTO tag_color (vault_id, kind, name_key, name, color)
+                    VALUES ($vaultId, $kind, $key, $name, $color)
+                    ON CONFLICT (vault_id, kind, name_key) DO UPDATE SET name = excluded.name, color = excluded.color
+                    """;
+            command.Parameters.AddWithValue("$vaultId", vaultId);
+            command.Parameters.AddWithValue("$kind", TagColors.ToKindCode(assignment.Kind));
+            command.Parameters.AddWithValue("$key", TagColors.KeyOf(assignment.Name));
+            if (assignment.Color != TagColor.Default)
+            {
+                command.Parameters.AddWithValue("$name", assignment.Name);
+                command.Parameters.AddWithValue("$color", TagColors.ToStorageText(assignment.Color));
+            }
+
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 
     private static async Task InsertEntryAsync(

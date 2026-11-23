@@ -1,5 +1,6 @@
 using KeyHolder.Domain.Entries;
 using KeyHolder.Domain.Locking;
+using KeyHolder.Domain.Tags;
 using KeyHolder.Infrastructure.FakeData;
 
 namespace KeyHolder.IntegrationTests.Persistence;
@@ -23,6 +24,8 @@ public abstract class EntryRepositoryContract : IDisposable
     private IVaultStateStore State => (IVaultStateStore)Repository;
 
     private IFakeDataStore Seedable => (IFakeDataStore)Repository;
+
+    private ITagColorStore Colors => (ITagColorStore)Repository;
 
     public void Dispose()
     {
@@ -319,6 +322,155 @@ public abstract class EntryRepositoryContract : IDisposable
         await seeder.SeedIfNeededAsync();
 
         Assert.Empty(await Repository.ListSummariesAsync());
+    }
+
+    [Fact]
+    public async Task NewVaultHasNoTagColors()
+    {
+        Assert.Empty(await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task ColorsAreSavedWithANewEntry()
+    {
+        await Repository.AddAsync(NewEntry(), [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+
+        var colors = await Colors.ListTagColorsAsync();
+
+        var color = Assert.Single(colors);
+        Assert.Equal(new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue), color);
+    }
+
+    [Fact]
+    public async Task ColorsAreSavedWithAnUpdate()
+    {
+        var entry = NewEntry();
+        await Repository.AddAsync(entry);
+
+        await Repository.UpdateAsync(
+            entry.Id,
+            entry.Metadata,
+            null,
+            T0.AddHours(1),
+            [new TagColorAssignment(TagKind.Security, "Sensitive", TagColor.Red)]);
+
+        Assert.Equal(
+            [new TagColorAssignment(TagKind.Security, "Sensitive", TagColor.Red)],
+            await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task TagColorsIgnoreCaseAndKeepOneColorPerTagName()
+    {
+        await Repository.AddAsync(
+            NewEntry("A"),
+            [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue), new TagColorAssignment(TagKind.Data, "Финансы", TagColor.Green)]);
+        await Repository.AddAsync(
+            NewEntry("B"),
+            [new TagColorAssignment(TagKind.Data, "EMAIL", TagColor.Red), new TagColorAssignment(TagKind.Data, "финансы", TagColor.Pink)]);
+
+        var colors = await Colors.ListTagColorsAsync();
+
+        Assert.Equal(2, colors.Count);
+        Assert.Equal(TagColor.Red, colors.Single(c => string.Equals(c.Name, "email", StringComparison.OrdinalIgnoreCase)).Color);
+        Assert.Equal(TagColor.Pink, colors.Single(c => string.Equals(c.Name, "финансы", StringComparison.OrdinalIgnoreCase)).Color);
+    }
+
+    [Fact]
+    public async Task TheSameNameInBothListsHasSeparateColors()
+    {
+        await Repository.AddAsync(
+            NewEntry(),
+            [new TagColorAssignment(TagKind.Data, "Account", TagColor.Teal), new TagColorAssignment(TagKind.Security, "Account", TagColor.Orange)]);
+
+        var colors = await Colors.ListTagColorsAsync();
+
+        Assert.Equal(TagColor.Teal, colors.Single(c => c.Kind == TagKind.Data).Color);
+        Assert.Equal(TagColor.Orange, colors.Single(c => c.Kind == TagKind.Security).Color);
+    }
+
+    [Fact]
+    public async Task DefaultColorRemovesTheStoredColor()
+    {
+        await Repository.AddAsync(NewEntry("A"), [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+
+        await Repository.AddAsync(NewEntry("B"), [new TagColorAssignment(TagKind.Data, "email", TagColor.Default)]);
+
+        Assert.Empty(await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task ColorsOfAMissingEntryAreNotSaved()
+    {
+        var updated = await Repository.UpdateAsync(
+            Guid.NewGuid(),
+            new EntryMetadata("X"),
+            null,
+            T0,
+            [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+
+        Assert.False(updated);
+        Assert.Empty(await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task InvalidEntryDoesNotSaveItsColors()
+    {
+        var invalid = new VaultEntry(Guid.NewGuid(), new EntryMetadata("  "), EntrySecret.Empty, T0, T0);
+
+        await Assert.ThrowsAsync<EntryValidationException>(
+            () => Repository.AddAsync(invalid, [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]));
+
+        Assert.Empty(await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task InvalidTagNameIsRejectedAndNothingIsStored()
+    {
+        await Assert.ThrowsAsync<EntryValidationException>(
+            () => Repository.AddAsync(NewEntry(), [new TagColorAssignment(TagKind.Data, "a,b", TagColor.Blue)]));
+
+        Assert.Empty(await Repository.ListSummariesAsync());
+        Assert.Empty(await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task SavingColorsMarksTheVaultDirty()
+    {
+        var entry = NewEntry();
+        await Seedable.SeedOnceAsync([entry]);
+        Assert.False(await State.GetLocalChangedSinceReplicaAsync());
+
+        await Repository.UpdateAsync(
+            entry.Id,
+            entry.Metadata,
+            null,
+            T0.AddMinutes(1),
+            [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+
+        Assert.True(await State.GetLocalChangedSinceReplicaAsync());
+    }
+
+    [Fact]
+    public async Task SeederAddsDemoTagColorsWithoutMarkingTheVaultDirty()
+    {
+        await new FakeDataSeeder(Seedable, new SystemClock()).SeedIfNeededAsync();
+
+        var colors = await Colors.ListTagColorsAsync();
+
+        Assert.Contains(colors, c => c.Kind == TagKind.Security && c.Name == "Sensitive" && c.Color == TagColor.Red);
+        Assert.False(await State.GetLocalChangedSinceReplicaAsync());
+    }
+
+    [Fact]
+    public async Task ColorsOfTagsNoLongerUsedAreKept()
+    {
+        var entry = NewEntry();
+        await Repository.AddAsync(entry, [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+
+        await Repository.DeleteAsync(entry.Id);
+
+        Assert.Single(await Colors.ListTagColorsAsync());
     }
 
     [Fact]
