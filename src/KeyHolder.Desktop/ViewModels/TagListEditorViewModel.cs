@@ -64,6 +64,8 @@ public sealed class TagListEditorViewModel : ViewModelBase
         AddCommand = new RelayCommand(StartAdding, () => !IsAdding && Items.Count < EntryLimits.MaxTagsPerList);
         OkCommand = new RelayCommand(Confirm, () => IsAdding && CurrentError is null);
         CancelAddCommand = new RelayCommand(CancelAdding);
+
+        RefreshExistingTags();
     }
 
     /// <summary>
@@ -103,6 +105,7 @@ public sealed class TagListEditorViewModel : ViewModelBase
             if (SetProperty(ref _isAdding, value))
             {
                 OnPropertyChanged(nameof(ShowAddButton));
+                OnPropertyChanged(nameof(CanPickExistingTag));
                 CommandManager.InvalidateRequerySuggested();
             }
         }
@@ -114,6 +117,11 @@ public sealed class TagListEditorViewModel : ViewModelBase
     public bool ShowAddButton => !IsAdding;
 
     public bool HasExistingTags => ExistingTags.Count > 0;
+
+    /// <summary>
+    /// The existing-tag picker works only while the add panel is closed and the tag limit is not reached.
+    /// </summary>
+    public bool CanPickExistingTag => !IsAdding && Items.Count < EntryLimits.MaxTagsPerList;
 
     public string NewName
     {
@@ -152,7 +160,7 @@ public sealed class TagListEditorViewModel : ViewModelBase
     public bool HasNewNameError => NewNameError.Length > 0;
 
     /// <summary>
-    /// The chosen existing tag. Choosing one fills the name and its stored color.
+    /// The existing-tag picker. Choosing a tag adds it at once with its stored color, then the picker resets.
     /// </summary>
     public TagDisplay? SelectedExisting
     {
@@ -164,17 +172,13 @@ public sealed class TagListEditorViewModel : ViewModelBase
                 return;
             }
 
-            _syncing = true;
-            try
+            if (CanPickExistingTag)
             {
-                NewName = value.Name;
-                SetColor(_catalog.GetColor(_kind, value.Name));
-                _colorChosen = false;
+                AddExisting(value);
             }
-            finally
-            {
-                _syncing = false;
-            }
+
+            // Reset the picker. The field is written directly, so this setter does not run again.
+            SetProperty(ref _selectedExisting, null);
         }
     }
 
@@ -207,14 +211,6 @@ public sealed class TagListEditorViewModel : ViewModelBase
             _syncing = false;
         }
 
-        var used = Items.Select(item => item.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        ExistingTags.Clear();
-        foreach (var name in _catalog.KnownTags(_kind).Where(name => !used.Contains(name)))
-        {
-            ExistingTags.Add(_catalog.GetDisplay(_kind, name));
-        }
-
-        OnPropertyChanged(nameof(HasExistingTags));
         RefreshError();
         IsAdding = true;
     }
@@ -241,6 +237,7 @@ public sealed class TagListEditorViewModel : ViewModelBase
         var color = SelectedColor.Color;
 
         Items.Add(CreateItem(name, color));
+        RefreshExistingTags();
 
         var key = TagColors.KeyOf(name);
         if (color == _catalog.GetColor(_kind, name))
@@ -276,7 +273,7 @@ public sealed class TagListEditorViewModel : ViewModelBase
 
         // A removed tag leaves no color change behind.
         _staged.Remove(TagColors.KeyOf(item.Name));
-        CommandManager.InvalidateRequerySuggested();
+        RefreshExistingTags();
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -312,6 +309,33 @@ public sealed class TagListEditorViewModel : ViewModelBase
                 _syncing = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Adds a known tag with its stored color, without opening the add panel.
+    /// </summary>
+    private void AddExisting(TagDisplay tag)
+    {
+        Items.Add(CreateItem(tag.Name, _catalog.GetColor(_kind, tag.Name)));
+        RefreshExistingTags();
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Lists the known tags that this entry does not have yet.
+    /// </summary>
+    private void RefreshExistingTags()
+    {
+        var used = Items.Select(item => item.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        ExistingTags.Clear();
+        foreach (var name in _catalog.KnownTags(_kind).Where(name => !used.Contains(name)))
+        {
+            ExistingTags.Add(_catalog.GetDisplay(_kind, name));
+        }
+
+        OnPropertyChanged(nameof(HasExistingTags));
+        OnPropertyChanged(nameof(CanPickExistingTag));
+        CommandManager.InvalidateRequerySuggested();
     }
 
     private void SetColor(TagColor color) => SelectedColor = TagColorPalette.GetOption(color);

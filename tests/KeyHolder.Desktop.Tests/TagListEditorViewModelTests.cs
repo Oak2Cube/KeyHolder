@@ -96,24 +96,64 @@ public sealed class TagListEditorViewModelTests
     }
 
     [Fact]
-    public async Task ChoosingAnExistingTagFillsTheNameAndItsStoredColor()
+    public async Task ChoosingAnExistingTagAddsItAtOnceWithItsStoredColor()
+    {
+        var (_, editor) = await NewEditorAsync();
+        var list = editor.STags;
+
+        // No "+" press needed: the picker sits next to "+" and works directly.
+        Assert.True(list.CanPickExistingTag);
+        list.SelectedExisting = list.ExistingTags.Single(tag => tag.Name == "Sensitive");
+
+        var item = Assert.Single(list.Items);
+        Assert.Equal("Sensitive", item.Name);
+        Assert.Same(TagColorPalette.GetBrush(TagColor.Red), item.Brush);
+        Assert.False(list.IsAdding);
+        Assert.Null(list.SelectedExisting);
+
+        // The stored color is reused, so nothing needs to be saved.
+        Assert.Empty(list.StagedColors);
+        Assert.DoesNotContain(list.ExistingTags, tag => tag.Name == "Sensitive");
+    }
+
+    [Fact]
+    public async Task ExistingTagPickerIsUnavailableWhileThePlusPanelIsOpen()
     {
         var (_, editor) = await NewEditorAsync();
         var list = editor.STags;
 
         list.AddCommand.Execute(null);
-        Assert.True(list.HasExistingTags);
-        list.SelectedExisting = list.ExistingTags.Single(tag => tag.Name == "Sensitive");
 
-        Assert.Equal("Sensitive", list.NewName);
-        Assert.Equal(TagColor.Red, list.SelectedColor.Color);
-        Assert.True(list.OkCommand.CanExecute(null));
+        Assert.False(list.CanPickExistingTag);
+        list.SelectedExisting = list.ExistingTags.Single(tag => tag.Name == "Finance");
+        Assert.Empty(list.Items);
 
-        list.OkCommand.Execute(null);
+        list.CancelAddCommand.Execute(null);
 
-        // The stored color is reused, so nothing needs to be saved.
-        Assert.Empty(list.StagedColors);
-        Assert.Same(TagColorPalette.GetBrush(TagColor.Red), list.Items.Single().Brush);
+        Assert.True(list.CanPickExistingTag);
+    }
+
+    [Fact]
+    public async Task ExistingTagListIsReadyBeforePlusIsPressed()
+    {
+        var (_, editor) = await NewEditorAsync();
+
+        Assert.True(editor.STags.HasExistingTags);
+        Assert.Contains(editor.STags.ExistingTags, tag => tag.Name == "Finance");
+    }
+
+    [Fact]
+    public async Task RemovingATagReturnsItToTheExistingTagPicker()
+    {
+        var (_, editor) = await NewEditorAsync();
+        var list = editor.STags;
+        TagEditorHelpers.AddTag(list, "Sensitive");
+        var sensitive = list.Items.Single(item => item.Name == "Sensitive");
+        Assert.DoesNotContain(list.ExistingTags, tag => tag.Name == "Sensitive");
+
+        sensitive.RemoveCommand.Execute(null);
+
+        Assert.Contains(list.ExistingTags, tag => tag.Name == "Sensitive");
     }
 
     [Fact]
