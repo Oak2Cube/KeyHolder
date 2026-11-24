@@ -14,6 +14,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = viewModel;
         StateChanged += OnStateChanged;
+        SourceInitialized += (_, _) => Views.AutoGrowWindow.Attach(this);
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

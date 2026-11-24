@@ -1,4 +1,4 @@
-# KeyHolder
+﻿# KeyHolder
 
 This repository defines the architecture for a small Windows password vault that works offline. Encrypted SQLite replicas move between hosts only by hand. Each hosted app keeps **one durable replica** next to the app (a temp file exists only during export, then replace).
 
@@ -136,14 +136,15 @@ The demo data is created once. To start over, close the app and delete `%LOCALAP
 1. Launch, press **Unlock**: ten `Fake ...` entries appear and the status bar shows "No local changes".
 2. **New entry** with only a title: it saves; an empty title shows an error and does not save.
 3. Edit it (importance, a generated password), save; then delete it and confirm. The status bar now shows "Changed since last replica export".
-4. Tags: in the editor press **+** under **Record type** or **Security category**. The add panel opens; **OK** stays dimmed for an empty or invalid name (commas, semicolons, duplicates, more than 50 characters). Choose an existing tag from the first dropdown (its name and color are filled in) or type a new name, pick a color, press **OK**. The tag appears in its color with a **-** button, and **+** is below it. Check that the dropdowns are dark and readable. Save: the tag has the same color in the list line, the detail chips, and the **Filter by tags** list. Change a tag's color on one entry and check that it changes on every entry. **Cancel** in the editor discards new colors.
+4. Tags: in the editor (it covers the whole vault area, in two columns) press **+** under **Record type** or **Security category**. The add panel opens; **OK** stays dimmed for an empty or invalid name (commas, semicolons, duplicates, more than 50 characters). Choose an existing tag from the first dropdown (its name and color are filled in) or type a new name, pick a color, press **OK**. The tag appears in its color with a **-** button, and **+** is below it. Check that the dropdowns are dark and readable. Save: the tag has the same color in the list line, the detail chips, and the **Filter by tags** list. Change a tag's color on one entry and check that it changes on every entry. **Cancel** in the editor discards new colors.
 5. Close and reopen the app: your changes are still there and the demo data was not added again.
 6. Search for `bank`; open **Search in** and add d-tags or s-tags to search them; the last checked field cannot be unchecked.
 7. Filter by an s-tag such as `Finance`, add a d-tag, then **Clear filters**.
 8. Sort by Name, Date, and Importance, with and without **Descending**.
 9. Select an entry: the password shows `••••••••`. **Reveal** shows it for about 10 seconds; **Copy** puts it on the clipboard, which clears after about 20 seconds. The notes row has the same **Reveal** and **Copy** buttons.
-10. Press **Lock**, then Unlock: the search box, selection, and revealed values are gone.
-11. Unlock and wait 5 minutes without touching the mouse or keyboard, or press `Win+L`: the vault is locked when you return.
+10. Layout: the vault has three panels (tools, entry list, details). Expand Search, Sort, and Filter: the window grows until everything fits without scrollbars. Shrink the window by hand (or use a small screen): scrollbars appear only in the panel that overflows, and the window does not shrink on its own. Press **+ New entry**: the editor replaces the three panels, Title has the cursor, and the form has two columns; **Cancel** brings the panels back. Check that the scrollbars are dark and thin, including in the list and in dropdowns.
+11. Press **Lock**, then Unlock: the search box, selection, and revealed values are gone.
+12. Unlock and wait 5 minutes without touching the mouse or keyboard, or press `Win+L`: the vault is locked when you return.
 
 Requirements:
 

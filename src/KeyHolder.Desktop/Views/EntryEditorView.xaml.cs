@@ -10,6 +10,15 @@ public partial class EntryEditorView : UserControl
         InitializeComponent();
     }
 
+    // When the editor opens, put the cursor into the title box.
+    private void OnTitleLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox box)
+        {
+            box.Dispatcher.BeginInvoke(() => box.Focus(), System.Windows.Threading.DispatcherPriority.Input);
+        }
+    }
+
     // When the add panel opens, put the cursor into the tag name box.
     private void OnTagNameVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {

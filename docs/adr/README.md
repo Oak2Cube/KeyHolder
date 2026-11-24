@@ -15,3 +15,5 @@ Status values: Proposed, Accepted, Superseded, Deprecated.
 | [0007](0007-single-writer-manual-transfer.md) | Single-writer manual transfer | Proposed |
 | [0008](0008-installer-and-updates.md) | Installer and update mechanism | Proposed |
 | [0009](0009-interim-plain-fake-data-schema.md) | Interim plain-column schema for fake data (Milestone 1) | Accepted |
+| [0010](0010-three-panel-layout-and-adaptive-window.md) | Three-panel vault layout and adaptive window | Accepted |
+| [0011](0011-full-area-two-column-editor.md) | Full-area two-column entry editor | Accepted |

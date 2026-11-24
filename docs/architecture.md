@@ -1,4 +1,4 @@
-# Architecture
+﻿# Architecture
 
 This file describes how KeyHolder is built.
 Also read:
@@ -111,6 +111,13 @@ It does not show the real password length.
 Reveal and Copy unlock only the selected entry’s secret part for a short time.
 The notes have their own Reveal and Copy buttons.
 Copy for notes puts only the notes on the clipboard, and it clears after the same timeout as the password.
+
+#### Window layout
+
+The unlocked view has three panels: tools (new entry, search, sort, filter), entry list, and details. While an entry is created or edited, a full-area two-column editor replaces the three panels ([ADR 0011](adr/0011-full-area-two-column-editor.md)).
+Each panel has its own scrollbar. The window grows to fit the tools and details panels up to the monitor work area,
+and scrollbars appear only after that. It never shrinks by itself.
+Scrollbars use the app colors. See [ADR 0010](adr/0010-three-panel-layout-and-adaptive-window.md).
 
 #### Search, filter, and sort
 

@@ -104,37 +104,37 @@
     </UserControl.Resources>
 
     <Grid Margin="16">
+    <!-- Browse mode: three panels. Hidden (not disabled) while an entry is being created or edited. -->
+    <Grid>
+        <Grid.Style>
+            <Style TargetType="Grid">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Grid.Style>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="340" />
-            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="270" />
+            <ColumnDefinition Width="12" />
+            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="12" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <!-- Left: search, sort, filter, list. Disabled while an entry is being edited. -->
+        <!-- Panel 1: new entry, search, sort, filter. Own scrollbar. -->
         <Border Grid.Column="0"
-                Padding="14"
+                Padding="14,14,6,14"
                 Background="{StaticResource CardBackgroundBrush}"
                 BorderBrush="{StaticResource BorderBrushColor}"
                 BorderThickness="1"
                 CornerRadius="14">
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <Grid.Style>
-                    <Style TargetType="Grid">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEditing}" Value="True">
-                                <Setter Property="IsEnabled" Value="False" />
-                                <Setter Property="Opacity" Value="0.5" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Grid.Style>
-
-                <StackPanel Grid.Row="0">
+                <ScrollViewer x:Name="ToolsScroll"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,0,8,0">
                     <Button Margin="0,0,0,10"
                             HorizontalAlignment="Stretch"
                             Command="{Binding NewCommand}"
@@ -215,7 +215,10 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding IsSelected}">
-                                            <TextBlock Foreground="{Binding Brush}" Text="{Binding Name}" />
+                                            <TextBlock Foreground="{Binding Brush}"
+                                                       Text="{Binding Name}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding Name}" />
                                         </CheckBox>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -229,7 +232,10 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <CheckBox IsChecked="{Binding IsSelected}">
-                                            <TextBlock Foreground="{Binding Brush}" Text="{Binding Name}" />
+                                            <TextBlock Foreground="{Binding Brush}"
+                                                       Text="{Binding Name}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip="{Binding Name}" />
                                         </CheckBox>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -242,11 +248,20 @@
                                 Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}" />
                     </Grid>
 
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="{Binding EntryCountText}" />
                 </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
 
-                <ListBox Grid.Row="1"
-                         ItemsSource="{Binding Entries}"
+        <!-- Panel 2: the entry list. Own scrollbar. -->
+        <Border Grid.Column="2"
+                Padding="8"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushColor}"
+                BorderThickness="1"
+                CornerRadius="14">
+            <Grid>
+                <ListBox ItemsSource="{Binding Entries}"
                          SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -286,8 +301,8 @@
             </Grid>
         </Border>
 
-        <!-- Right: empty hint, details, or editor. -->
-        <Border Grid.Column="2"
+        <!-- Panel 3: empty hint or details. Own scrollbars. -->
+        <Border Grid.Column="4"
                 Padding="24"
                 Background="{StaticResource CardBackgroundBrush}"
                 BorderBrush="{StaticResource BorderBrushColor}"
@@ -301,7 +316,9 @@
                            Visibility="{Binding ShowEmptyHint, Converter={StaticResource BoolToVisibility}}" />
 
                 <!-- Details -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                <ScrollViewer x:Name="DetailsScroll"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Auto"
                               Visibility="{Binding IsViewing, Converter={StaticResource BoolToVisibility}}">
                     <StackPanel>
                         <Grid>
@@ -432,18 +449,28 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <!-- Editor -->
-                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                              Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
-                    <ContentControl Content="{Binding Editor}">
-                        <ContentControl.ContentTemplate>
-                            <DataTemplate>
-                                <views:EntryEditorView />
-                            </DataTemplate>
-                        </ContentControl.ContentTemplate>
-                    </ContentControl>
-                </ScrollViewer>
             </Grid>
         </Border>
+    </Grid>
+
+    <!-- Edit mode: the editor fills the whole vault area until Save or Cancel. -->
+    <Border Padding="24"
+            Background="{StaticResource CardBackgroundBrush}"
+            BorderBrush="{StaticResource BorderBrushColor}"
+            BorderThickness="1"
+            CornerRadius="14"
+            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+        <ScrollViewer x:Name="EditorScroll"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Auto">
+            <ContentControl Content="{Binding Editor}">
+                <ContentControl.ContentTemplate>
+                    <DataTemplate>
+                        <views:EntryEditorView />
+                    </DataTemplate>
+                </ContentControl.ContentTemplate>
+            </ContentControl>
+        </ScrollViewer>
+    </Border>
     </Grid>
 </UserControl>
