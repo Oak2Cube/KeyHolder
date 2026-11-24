@@ -191,8 +191,20 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     public string GeneratorMessage
     {
         get => _generatorMessage;
-        private set => SetProperty(ref _generatorMessage, value);
+        private set
+        {
+            if (SetProperty(ref _generatorMessage, value))
+            {
+                OnPropertyChanged(nameof(HasGeneratorMessage));
+            }
+        }
     }
+
+    /// <summary>
+    /// True while there is a password-generator message to show. The view uses it so an empty
+    /// message does not reserve space.
+    /// </summary>
+    public bool HasGeneratorMessage => _generatorMessage.Length > 0;
 
     /// <summary>
     /// A save failure (not a field error), for example a database problem.
@@ -200,8 +212,20 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     public string ErrorMessage
     {
         get => _errorMessage;
-        private set => SetProperty(ref _errorMessage, value);
+        private set
+        {
+            if (SetProperty(ref _errorMessage, value))
+            {
+                OnPropertyChanged(nameof(HasErrorMessage));
+            }
+        }
     }
+
+    /// <summary>
+    /// True while there is a save failure to show. The view uses it so an empty
+    /// message does not reserve space.
+    /// </summary>
+    public bool HasErrorMessage => _errorMessage.Length > 0;
 
     public bool HasErrors => _errors.Count > 0;
 
