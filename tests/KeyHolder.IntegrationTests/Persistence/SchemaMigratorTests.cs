@@ -1,3 +1,5 @@
+using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 using KeyHolder.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 
@@ -60,6 +62,45 @@ public sealed class SchemaMigratorTests : IDisposable
         Assert.Equal(1, CountRows("entry"));
         Assert.Equal(0, CountRows("tag_color"));
         Assert.Equal(vaultId, ReadVaultId());
+    }
+
+    [Fact]
+    public void IconColumnsAreAddedByMigrationThree()
+    {
+        new SchemaMigrator(_vault.CreateFactory(), [new InitialSchemaMigration(), new TagColorMigration()]).Migrate();
+        Assert.DoesNotContain("icon", EntryColumns(), StringComparer.Ordinal);
+        Assert.DoesNotContain("icon_color", EntryColumns(), StringComparer.Ordinal);
+
+        var migrator = new SchemaMigrator(_vault.CreateFactory());
+        migrator.Migrate();
+
+        Assert.True(migrator.LatestVersion >= 3);
+        Assert.Contains("icon", EntryColumns(), StringComparer.Ordinal);
+        Assert.Contains("icon_color", EntryColumns(), StringComparer.Ordinal);
+    }
+
+    [Fact]
+    public async Task OldEntriesReadAsDefaultIconAfterMigrationThree()
+    {
+        new SchemaMigrator(_vault.CreateFactory(), [new InitialSchemaMigration(), new TagColorMigration()]).Migrate();
+        var vaultId = ReadVaultId();
+        using (var connection = _vault.CreateFactory().Open())
+        {
+            using var insert = connection.CreateCommand();
+            insert.CommandText = """
+                INSERT INTO entry (id, vault_id, title, d_tags, s_tags, created_at, updated_at)
+                VALUES ('22222222-2222-2222-2222-222222222222', $vault, 'Old', '[]', '[]', '2026-01-01T00:00:00.0000000Z', '2026-01-01T00:00:00.0000000Z')
+                """;
+            insert.Parameters.AddWithValue("$vault", vaultId);
+            insert.ExecuteNonQuery();
+        }
+
+        new SchemaMigrator(_vault.CreateFactory()).Migrate();
+
+        var repository = _vault.CreateMigratedRepository();
+        var summary = await repository.GetSummaryAsync(Guid.Parse("22222222-2222-2222-2222-222222222222"));
+        Assert.Equal(EntryIcon.Default, summary?.Metadata.Icon);
+        Assert.Equal(TagColor.Default, summary?.Metadata.IconColor);
     }
 
     [Fact]
@@ -191,6 +232,21 @@ public sealed class SchemaMigratorTests : IDisposable
         command.Parameters.AddWithValue("$vault", vaultId);
 
         Assert.Throws<SqliteException>(() => command.ExecuteNonQuery());
+    }
+
+    private List<string> EntryColumns()
+    {
+        using var connection = _vault.CreateFactory().Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "PRAGMA table_info(entry)";
+        using var reader = command.ExecuteReader();
+        var names = new List<string>();
+        while (reader.Read())
+        {
+            names.Add(reader.GetString(1));
+        }
+
+        return names;
     }
 
     private List<string> TableNames()

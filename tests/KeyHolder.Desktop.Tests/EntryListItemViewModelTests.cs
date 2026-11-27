@@ -1,7 +1,21 @@
+using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
+
 namespace KeyHolder.Desktop.Tests;
 
 public sealed class EntryListItemViewModelTests
 {
+    [Fact]
+    public async Task SeededEntriesExposeTheDefaultIcon()
+    {
+        var harness = await Harness.CreateAsync();
+
+        var item = await harness.SelectAsync("Fake Mail");
+
+        Assert.Equal(EntryIcon.Default, item.Icon);
+        Assert.Equal(TagColor.Default, item.IconColor);
+    }
+
     [Fact]
     public async Task AnEntryWithAllFieldsReportsAllOfThem()
     {

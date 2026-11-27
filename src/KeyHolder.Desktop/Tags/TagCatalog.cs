@@ -16,7 +16,7 @@ public sealed record TagDisplay(string Name, Brush Brush)
 
 /// <summary>
 /// A snapshot of the tags that exist in the vault and their colors. Built after every load, so a color change
-/// shows everywhere at once.
+/// shows everywhere at once. Only tags still used by at least one entry appear in the catalog.
 /// </summary>
 public sealed class TagCatalog
 {
@@ -35,12 +35,9 @@ public sealed class TagCatalog
         ArgumentNullException.ThrowIfNull(dTags);
         ArgumentNullException.ThrowIfNull(sTags);
 
-        var assignments = colors.ToList();
-        _colors = new TagColorLookup(assignments);
-
-        // Tags that no entry uses any more keep their color, so they stay selectable in the editor.
-        _dTags = Merge(dTags, assignments, TagKind.Data);
-        _sTags = Merge(sTags, assignments, TagKind.Security);
+        _colors = new TagColorLookup(colors);
+        _dTags = DistinctSorted(dTags);
+        _sTags = DistinctSorted(sTags);
     }
 
     /// <summary>
@@ -54,7 +51,7 @@ public sealed class TagCatalog
     }
 
     /// <summary>
-    /// Every known tag of a list, sorted, without duplicates ignoring case.
+    /// Every tag of a list that at least one entry still uses, sorted, without duplicates ignoring case.
     /// </summary>
     public IReadOnlyList<string> KnownTags(TagKind kind) => kind == TagKind.Data ? _dTags : _sTags;
 
@@ -69,12 +66,8 @@ public sealed class TagCatalog
     public IReadOnlyList<TagDisplay> GetDisplays(TagKind kind, IEnumerable<string> names) =>
         [.. names.Select(name => GetDisplay(kind, name))];
 
-    private static List<string> Merge(
-        IReadOnlyList<string> used,
-        List<TagColorAssignment> assignments,
-        TagKind kind) =>
-        [.. used
-            .Concat(assignments.Where(a => a.Kind == kind && a.Color != TagColor.Default).Select(a => a.Name))
+    private static List<string> DistinctSorted(IReadOnlyList<string> names) =>
+        [.. names
             .GroupBy(TagColors.KeyOf)
             .Select(group => group.First())
             .Order(StringComparer.OrdinalIgnoreCase)];

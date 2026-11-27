@@ -111,6 +111,28 @@ public sealed class TagTests
             color => Assert.Equal(color, TagColors.Parse(TagColors.ToStorageText(color))));
     }
 
+    [Theory]
+    [InlineData("Mail", EntryIcon.Mail)]
+    [InlineData("mail", EntryIcon.Mail)]
+    [InlineData(" Key ", EntryIcon.Key)]
+    [InlineData("Default", EntryIcon.Default)]
+    [InlineData("NotAnIcon", EntryIcon.Default)]
+    [InlineData("", EntryIcon.Default)]
+    [InlineData(null, EntryIcon.Default)]
+    [InlineData("3", EntryIcon.Default)]
+    public void StoredIconNamesParseWithFallbackToDefault(string? text, EntryIcon expected)
+    {
+        Assert.Equal(expected, EntryIcons.Parse(text));
+    }
+
+    [Fact]
+    public void EveryIconSurvivesAStorageRoundTrip()
+    {
+        Assert.All(
+            Enum.GetValues<EntryIcon>(),
+            icon => Assert.Equal(icon, EntryIcons.Parse(EntryIcons.ToStorageText(icon))));
+    }
+
     [Fact]
     public void KindCodesRoundTripAndUnknownCodesAreNull()
     {

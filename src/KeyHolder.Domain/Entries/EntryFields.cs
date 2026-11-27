@@ -12,6 +12,8 @@ public static class EntryFields
     public const string DTags = "DTags";
     public const string STags = "STags";
     public const string Importance = "Importance";
+    public const string Icon = "Icon";
+    public const string IconColor = "IconColor";
     public const string Password = "Password";
     public const string Notes = "Notes";
 }

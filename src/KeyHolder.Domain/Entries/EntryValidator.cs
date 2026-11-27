@@ -1,4 +1,5 @@
 using System.Globalization;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Domain.Entries;
 
@@ -22,7 +23,9 @@ public static class EntryValidator
             NormalizeOptional(metadata.Url),
             NormalizeTags(metadata.DTags),
             NormalizeTags(metadata.STags),
-            metadata.Importance);
+            metadata.Importance,
+            metadata.Icon,
+            metadata.IconColor);
     }
 
     /// <summary>
@@ -67,6 +70,16 @@ public static class EntryValidator
                 string.Create(
                     CultureInfo.InvariantCulture,
                     $"Importance must be between {EntryLimits.MinImportance} and {EntryLimits.MaxImportance}.")));
+        }
+
+        if (!Enum.IsDefined(normalized.Icon))
+        {
+            errors.Add(new ValidationError(EntryFields.Icon, "The icon is not supported."));
+        }
+
+        if (!Enum.IsDefined(normalized.IconColor))
+        {
+            errors.Add(new ValidationError(EntryFields.IconColor, "The icon color is not supported."));
         }
 
         return errors;

@@ -10,7 +10,7 @@ Also read:
 
 Each login entry has two locked parts:
 
-- `metadata_envelope`: title, username, email, URL, `d-tags`, `s-tags`, and optional `importance`
+- `metadata_envelope`: title, username, email, URL, `d-tags`, `s-tags`, optional `importance`, built-in `icon`, and `icon_color`
 - `secret_envelope`: password and notes
 
 Only **title** is required.
@@ -27,12 +27,20 @@ The user can set any string values on each entry.
 
 A tag is one short text (at most 50 characters, no commas or semicolons, no case-insensitive duplicates in one list).
 Each tag name can have one display color from a fixed palette. The color is shared by all entries and kept per list (a `Finance` d-tag and a `Finance` s-tag can differ).
+A tag exists in the catalog, editor dropdown, and filter list only while at least one entry uses it; unused color rows are pruned on write.
 Tag colors are metadata: they belong to the `metadata_envelope` scope and are encrypted with the metadata key.
 
 ### Importance
 
 `importance` is an optional number on an entry.
 The app uses it when sorting the list before display.
+
+### Icons
+
+Each entry has one built-in icon and one icon color (see [ADR 0012](adr/0012-entry-icons.md)).
+Icons are vector paths shipped with the app; users cannot upload images.
+Icon colors reuse the tag palette (10 colors including Default).
+The list and details show a 40×40 icon; the editor has a picker after the tag editors.
 
 ### Version 1 rules
 
@@ -121,7 +129,7 @@ Scrollbars use the app colors. See [ADR 0010](adr/0010-three-panel-layout-and-ad
 
 #### Search, filter, and sort
 
-- **Search:** the user picks 1 to 6 fields from title, username, email, URL, `d-tags`, and `s-tags`.
+- **Search:** the user picks 1 to 6 fields from title, username, email, URL, Record type, and Security category.
   Search looks only in the chosen fields.
 - **Filter:** the user can filter the list by `d-tags` and by `s-tags`.
 - **Sort:** the user can sort by name (title), date, or importance.

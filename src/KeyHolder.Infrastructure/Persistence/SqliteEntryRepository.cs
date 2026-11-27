@@ -18,7 +18,8 @@ namespace KeyHolder.Infrastructure.Persistence;
 public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, IFakeDataStore, ITagColorStore
 {
     private const string SummaryColumns =
-        "id, title, username, email, url, d_tags, s_tags, importance, created_at, updated_at, " +
+        "id, title, username, email, url, d_tags, s_tags, importance, icon, icon_color, " +
+        "created_at, updated_at, " +
         "(password IS NOT NULL AND password <> '') AS has_password, " +
         "(notes IS NOT NULL AND notes <> '') AS has_notes";
 
@@ -82,7 +83,7 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         }
 
         var summary = ReadSummary(reader);
-        return new VaultEntry(summary.Id, summary.Metadata, ReadSecret(reader, 12), summary.CreatedAt, summary.UpdatedAt);
+        return new VaultEntry(summary.Id, summary.Metadata, ReadSecret(reader, 14), summary.CreatedAt, summary.UpdatedAt);
     }
 
     public async Task<IReadOnlyList<TagColorAssignment>> ListTagColorsAsync(
@@ -123,6 +124,7 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
                 var vaultId = await ReadVaultIdAsync(connection, transaction, cancellationToken);
                 await InsertEntryAsync(connection, transaction, vaultId, entry, metadata, secret, cancellationToken);
                 await SaveTagColorsAsync(connection, transaction, vaultId, colors, cancellationToken);
+                await PruneUnusedTagColorsAsync(connection, transaction, vaultId, cancellationToken);
                 await MarkDirtyAsync(connection, transaction, cancellationToken);
                 return true;
             },
@@ -159,6 +161,8 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
                         d_tags = $dTags,
                         s_tags = $sTags,
                         importance = $importance,
+                        icon = $icon,
+                        icon_color = $iconColor,
                         metadata_revision = metadata_revision + 1,
                         password = CASE WHEN $replaceSecret = 1 THEN $password ELSE password END,
                         notes = CASE WHEN $replaceSecret = 1 THEN $notes ELSE notes END,
@@ -180,6 +184,7 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
 
                 var vaultId = await ReadVaultIdAsync(connection, transaction, cancellationToken);
                 await SaveTagColorsAsync(connection, transaction, vaultId, colors, cancellationToken);
+                await PruneUnusedTagColorsAsync(connection, transaction, vaultId, cancellationToken);
                 await MarkDirtyAsync(connection, transaction, cancellationToken);
                 return true;
             },
@@ -200,6 +205,8 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
                     return false;
                 }
 
+                var vaultId = await ReadVaultIdAsync(connection, transaction, cancellationToken);
+                await PruneUnusedTagColorsAsync(connection, transaction, vaultId, cancellationToken);
                 await MarkDirtyAsync(connection, transaction, cancellationToken);
                 return true;
             },
@@ -255,6 +262,7 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
                 }
 
                 await SaveTagColorsAsync(connection, transaction, vaultId, colors, cancellationToken);
+                await PruneUnusedTagColorsAsync(connection, transaction, vaultId, cancellationToken);
 
                 // Seeding is not a user change, so the dirty flag stays as it is.
                 await using var mark = connection.CreateCommand();
@@ -326,6 +334,64 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         }
     }
 
+    private static async Task PruneUnusedTagColorsAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string vaultId,
+        CancellationToken cancellationToken)
+    {
+        var used = new HashSet<(string Kind, string Key)>();
+
+        await using (var list = connection.CreateCommand())
+        {
+            list.Transaction = transaction;
+            list.CommandText = "SELECT d_tags, s_tags FROM entry";
+            await using var reader = await list.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                foreach (var name in ReadTags(reader.GetString(0)))
+                {
+                    used.Add((TagColors.ToKindCode(TagKind.Data), TagColors.KeyOf(name)));
+                }
+
+                foreach (var name in ReadTags(reader.GetString(1)))
+                {
+                    used.Add((TagColors.ToKindCode(TagKind.Security), TagColors.KeyOf(name)));
+                }
+            }
+        }
+
+        await using var colors = connection.CreateCommand();
+        colors.Transaction = transaction;
+        colors.CommandText = "SELECT kind, name_key FROM tag_color WHERE vault_id = $vaultId";
+        colors.Parameters.AddWithValue("$vaultId", vaultId);
+
+        var unused = new List<(string Kind, string Key)>();
+        await using (var reader = await colors.ExecuteReaderAsync(cancellationToken))
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                var key = (reader.GetString(0), reader.GetString(1));
+                if (!used.Contains(key))
+                {
+                    unused.Add(key);
+                }
+            }
+        }
+
+        foreach (var (kind, key) in unused)
+        {
+            await using var delete = connection.CreateCommand();
+            delete.Transaction = transaction;
+            delete.CommandText =
+                "DELETE FROM tag_color WHERE vault_id = $vaultId AND kind = $kind AND name_key = $key";
+            delete.Parameters.AddWithValue("$vaultId", vaultId);
+            delete.Parameters.AddWithValue("$kind", kind);
+            delete.Parameters.AddWithValue("$key", key);
+            await delete.ExecuteNonQueryAsync(cancellationToken);
+        }
+    }
+
     private static async Task InsertEntryAsync(
         SqliteConnection connection,
         SqliteTransaction transaction,
@@ -339,10 +405,10 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         command.Transaction = transaction;
         command.CommandText = """
             INSERT INTO entry (
-                id, vault_id, title, username, email, url, d_tags, s_tags, importance,
+                id, vault_id, title, username, email, url, d_tags, s_tags, importance, icon, icon_color,
                 password, notes, created_at, updated_at)
             VALUES (
-                $id, $vaultId, $title, $username, $email, $url, $dTags, $sTags, $importance,
+                $id, $vaultId, $title, $username, $email, $url, $dTags, $sTags, $importance, $icon, $iconColor,
                 $password, $notes, $created, $updated)
             """;
         command.Parameters.AddWithValue("$id", IdText(entry.Id));
@@ -365,6 +431,12 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
         command.Parameters.AddWithValue("$dTags", JsonSerializer.Serialize(metadata.DTags));
         command.Parameters.AddWithValue("$sTags", JsonSerializer.Serialize(metadata.STags));
         command.Parameters.AddWithValue("$importance", (object?)metadata.Importance ?? DBNull.Value);
+        command.Parameters.AddWithValue(
+            "$icon",
+            metadata.Icon == EntryIcon.Default ? DBNull.Value : EntryIcons.ToStorageText(metadata.Icon));
+        command.Parameters.AddWithValue(
+            "$iconColor",
+            metadata.IconColor == TagColor.Default ? DBNull.Value : TagColors.ToStorageText(metadata.IconColor));
     }
 
     private static async Task MarkDirtyAsync(
@@ -387,16 +459,18 @@ public sealed class SqliteEntryRepository : IEntryRepository, IVaultStateStore, 
             OptionalString(reader, 4),
             ReadTags(reader.GetString(5)),
             ReadTags(reader.GetString(6)),
-            reader.IsDBNull(7) ? null : reader.GetInt32(7));
+            reader.IsDBNull(7) ? null : reader.GetInt32(7),
+            EntryIcons.Parse(OptionalString(reader, 8)),
+            TagColors.Parse(OptionalString(reader, 9)));
 
         return new EntrySummary(
             Guid.Parse(reader.GetString(0)),
             metadata,
-            ParseTime(reader.GetString(8)),
-            ParseTime(reader.GetString(9)))
+            ParseTime(reader.GetString(10)),
+            ParseTime(reader.GetString(11)))
         {
-            HasPassword = reader.GetInt32(10) != 0,
-            HasNotes = reader.GetInt32(11) != 0,
+            HasPassword = reader.GetInt32(12) != 0,
+            HasNotes = reader.GetInt32(13) != 0,
         };
     }
 

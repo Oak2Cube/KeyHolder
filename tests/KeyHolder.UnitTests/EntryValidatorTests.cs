@@ -1,4 +1,5 @@
 using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.UnitTests;
 
@@ -83,6 +84,28 @@ public sealed class EntryValidatorTests
     public void ImportanceIsOptional()
     {
         Assert.Empty(EntryValidator.Validate(new EntryMetadata("A", Importance: null)));
+    }
+
+    [Fact]
+    public void UndefinedIconIsRejected()
+    {
+        var errors = EntryValidator.Validate(new EntryMetadata("A", Icon: (EntryIcon)999));
+
+        Assert.Contains(errors, error => error.Field == EntryFields.Icon);
+    }
+
+    [Fact]
+    public void UndefinedIconColorIsRejected()
+    {
+        var errors = EntryValidator.Validate(new EntryMetadata("A", IconColor: (TagColor)999));
+
+        Assert.Contains(errors, error => error.Field == EntryFields.IconColor);
+    }
+
+    [Fact]
+    public void DefaultIconAndColorAreValid()
+    {
+        Assert.Empty(EntryValidator.Validate(new EntryMetadata("A")));
     }
 
     [Fact]

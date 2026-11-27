@@ -2,6 +2,7 @@ using System.Collections;
 using System.ComponentModel;
 using System.Globalization;
 using KeyHolder.Cryptography;
+using KeyHolder.Desktop.Icons;
 using KeyHolder.Desktop.Mvvm;
 using KeyHolder.Desktop.Tags;
 using KeyHolder.Domain.Entries;
@@ -52,6 +53,8 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     private int _generatorLength = PasswordGeneratorOptions.DefaultLength;
     private bool _generatorSymbols = true;
     private bool _generatorAvoidAmbiguous;
+    private EntryIconOption _selectedIcon;
+    private TagColorOption _selectedIconColor;
 
     private EntryEditorViewModel(
         IEntryRepository repository,
@@ -78,6 +81,8 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
         DTags.Changed += OnTagsChanged;
         STags.Changed += OnTagsChanged;
 
+        var icon = EntryIcon.Default;
+        var iconColor = TagColor.Default;
         if (existing is not null)
         {
             _entryId = existing.Id;
@@ -87,10 +92,15 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
             _email = metadata.Email ?? string.Empty;
             _url = metadata.Url ?? string.Empty;
             _importanceText = metadata.Importance?.ToString(CultureInfo.CurrentCulture) ?? string.Empty;
+            icon = metadata.Icon;
+            iconColor = metadata.IconColor;
             _existingPassword = existingSecret?.Password;
             _originalNotes = existingSecret?.Notes;
             _notes = existingSecret?.Notes ?? string.Empty;
         }
+
+        _selectedIcon = IconCatalog.Options.First(option => option.Icon == icon);
+        _selectedIconColor = TagColorPalette.GetOption(iconColor);
 
         SaveCommand = new AsyncRelayCommand(SaveAsync, null, ReportError);
         CancelCommand = new RelayCommand(Cancel);
@@ -148,6 +158,61 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
     /// s-tags (Security category, for example Finance or Sensitive), edited with "+" and "-".
     /// </summary>
     public TagListEditorViewModel STags { get; }
+
+    /// <summary>
+    /// Built-in icons the user can pick. Users cannot upload their own.
+    /// </summary>
+    public IReadOnlyList<EntryIconOption> Icons { get; } = IconCatalog.Options;
+
+    /// <summary>
+    /// The 10 icon tint colors (same palette as tags).
+    /// </summary>
+    public IReadOnlyList<TagColorOption> IconColors { get; } = TagColorPalette.Options;
+
+    /// <summary>
+    /// The icon currently chosen in the picker.
+    /// </summary>
+    public EntryIconOption SelectedIcon
+    {
+        get => _selectedIcon;
+        set
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            if (SetProperty(ref _selectedIcon, value))
+            {
+                OnPropertyChanged(nameof(Icon));
+                OnPropertyChanged(nameof(IconColor));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The tint currently chosen for the icon.
+    /// </summary>
+    public TagColorOption SelectedIconColor
+    {
+        get => _selectedIconColor;
+        set
+        {
+            if (value is null)
+            {
+                return;
+            }
+
+            if (SetProperty(ref _selectedIconColor, value))
+            {
+                OnPropertyChanged(nameof(IconColor));
+            }
+        }
+    }
+
+    public EntryIcon Icon => _selectedIcon.Icon;
+
+    public TagColor IconColor => _selectedIconColor.Color;
 
     public string ImportanceText
     {
@@ -393,7 +458,9 @@ public sealed class EntryEditorViewModel : ViewModelBase, INotifyDataErrorInfo
             Url,
             DTags.Names,
             STags.Names,
-            importance);
+            importance,
+            Icon,
+            IconColor);
     }
 
     private void OnTagsChanged(object? sender, EventArgs e)

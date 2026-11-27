@@ -118,7 +118,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="270" />
             <ColumnDefinition Width="12" />
-            <ColumnDefinition Width="300" />
+            <ColumnDefinition Width="330" />
             <ColumnDefinition Width="12" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
@@ -265,36 +265,47 @@
                          SelectedItem="{Binding SelectedEntry, Mode=TwoWay}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock FontWeight="SemiBold"
-                                               Text="{Binding Title}"
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <views:EntryIconView Margin="0,0,10,0"
+                                                     VerticalAlignment="Center"
+                                                     Icon="{Binding Icon}"
+                                                     IconColor="{Binding IconColor}"
+                                                     IconSize="40" />
+                                <StackPanel Grid.Column="1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock FontWeight="SemiBold"
+                                                   Text="{Binding Title}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="1"
+                                                   Margin="8,0,0,0"
+                                                   Foreground="{StaticResource AccentBrush}"
+                                                   Text="{Binding ImportanceText}"
+                                                   ToolTip="Importance" />
+                                    </Grid>
+                                    <TextBlock Foreground="{StaticResource SecondaryTextBrush}"
+                                               FontSize="12"
+                                               Text="{Binding Subtitle}"
                                                TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Grid.Column="1"
-                                               Margin="8,0,0,0"
-                                               Foreground="{StaticResource AccentBrush}"
-                                               Text="{Binding ImportanceText}"
-                                               ToolTip="Importance" />
-                                </Grid>
-                                <TextBlock Foreground="{StaticResource SecondaryTextBrush}"
-                                           FontSize="12"
-                                           Text="{Binding Subtitle}"
-                                           TextTrimming="CharacterEllipsis" />
-                                <ItemsControl ItemsSource="{Binding DTagList}" ItemsPanel="{StaticResource TagPanel}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Margin="0,0,8,0"
-                                                       FontSize="11"
-                                                       Foreground="{Binding Brush}"
-                                                       Text="{Binding Name}" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding DTagList}" ItemsPanel="{StaticResource TagPanel}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Margin="0,0,8,0"
+                                                           FontSize="11"
+                                                           Foreground="{Binding Brush}"
+                                                           Text="{Binding Name}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
@@ -330,10 +341,18 @@
                             <!-- Left column: the title and the fields directly below it.
                                  Its height does not depend on the "Last changed" block. -->
                             <StackPanel Grid.Column="0">
-                                <TextBlock FontSize="24"
-                                           FontWeight="SemiBold"
-                                           Text="{Binding SelectedEntry.Title}"
-                                           TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal">
+                                    <views:EntryIconView Margin="0,0,12,0"
+                                                         VerticalAlignment="Top"
+                                                         Icon="{Binding SelectedEntry.Icon}"
+                                                         IconColor="{Binding SelectedEntry.IconColor}"
+                                                         IconSize="40" />
+                                    <TextBlock FontSize="24"
+                                               FontWeight="SemiBold"
+                                               VerticalAlignment="Center"
+                                               Text="{Binding SelectedEntry.Title}"
+                                               TextWrapping="Wrap" />
+                                </StackPanel>
 
                                 <StackPanel Visibility="{Binding SelectedEntry.HasUsername, Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Username" />
@@ -408,34 +427,50 @@
                                 <!-- Password and notes rows appear only when they have a value. -->
                                 <StackPanel Margin="0,0,0,10" Visibility="{Binding SelectedEntry.HasPassword, Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,3" Text="Password" />
-                                    <StackPanel Orientation="Horizontal">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
                                         <TextBlock MinWidth="160"
                                                    Margin="0,0,12,0"
                                                    VerticalAlignment="Center"
                                                    FontFamily="Consolas"
                                                    FontSize="15"
                                                    Text="{Binding Secret.PasswordDisplay}" />
-                                        <Button Style="{StaticResource RevealButton}"
-                                                Command="{Binding Secret.RevealPasswordCommand}"
-                                                Content="{Binding Secret.RevealPasswordLabel}" />
-                                        <Button Command="{Binding Secret.CopyPasswordCommand}" Content="Copy" />
-                                    </StackPanel>
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Top"
+                                                    Orientation="Horizontal">
+                                            <Button Style="{StaticResource RevealButton}"
+                                                    Command="{Binding Secret.RevealPasswordCommand}"
+                                                    Content="{Binding Secret.RevealPasswordLabel}" />
+                                            <Button Command="{Binding Secret.CopyPasswordCommand}" Content="Copy" />
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
 
                                 <StackPanel Visibility="{Binding SelectedEntry.HasNotes, Converter={StaticResource BoolToVisibility}}">
                                     <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,3" Text="Notes" />
-                                    <StackPanel Orientation="Horizontal">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
                                         <TextBlock MinWidth="160"
                                                    MaxWidth="360"
                                                    Margin="0,0,12,0"
-                                                   VerticalAlignment="Center"
+                                                   VerticalAlignment="Top"
                                                    Text="{Binding Secret.NotesDisplay}"
                                                    TextWrapping="Wrap" />
-                                        <Button Style="{StaticResource RevealButton}"
-                                                Command="{Binding Secret.RevealNotesCommand}"
-                                                Content="{Binding Secret.RevealNotesLabel}" />
-                                        <Button Command="{Binding Secret.CopyNotesCommand}" Content="Copy" />
-                                    </StackPanel>
+                                        <StackPanel Grid.Column="1"
+                                                    VerticalAlignment="Top"
+                                                    Orientation="Horizontal">
+                                            <Button Style="{StaticResource RevealButton}"
+                                                    Command="{Binding Secret.RevealNotesCommand}"
+                                                    Content="{Binding Secret.RevealNotesLabel}" />
+                                            <Button Command="{Binding Secret.CopyNotesCommand}" Content="Copy" />
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
 
                                 <!-- The message takes space only while it has text. -->

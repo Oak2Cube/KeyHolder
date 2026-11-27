@@ -79,6 +79,7 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
             }
 
             SaveTagColors(colors);
+            PruneUnusedTagColors();
             _dirty = true;
         }
 
@@ -113,6 +114,7 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
                 UpdatedAt = now,
             };
             SaveTagColors(colors);
+            PruneUnusedTagColors();
             _dirty = true;
             return Task.FromResult(true);
         }
@@ -123,7 +125,12 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
         lock (_gate)
         {
             var removed = _entries.Remove(id);
-            _dirty |= removed;
+            if (removed)
+            {
+                PruneUnusedTagColors();
+                _dirty = true;
+            }
+
             return Task.FromResult(removed);
         }
     }
@@ -162,6 +169,7 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
             }
 
             SaveTagColors(colors);
+            PruneUnusedTagColors();
             _seeded = true;
             return Task.FromResult(true);
         }
@@ -181,6 +189,29 @@ public sealed class InMemoryEntryRepository : IEntryRepository, IVaultStateStore
             {
                 _tagColors[key] = assignment;
             }
+        }
+    }
+
+    // Must be called inside the lock. Drops colors for tags no entry uses any more.
+    private void PruneUnusedTagColors()
+    {
+        var used = new HashSet<(TagKind Kind, string Key)>();
+        foreach (var entry in _entries.Values)
+        {
+            foreach (var name in entry.Metadata.DTags)
+            {
+                used.Add((TagKind.Data, TagColors.KeyOf(name)));
+            }
+
+            foreach (var name in entry.Metadata.STags)
+            {
+                used.Add((TagKind.Security, TagColors.KeyOf(name)));
+            }
+        }
+
+        foreach (var key in _tagColors.Keys.Where(key => !used.Contains(key)).ToList())
+        {
+            _tagColors.Remove(key);
         }
     }
 }

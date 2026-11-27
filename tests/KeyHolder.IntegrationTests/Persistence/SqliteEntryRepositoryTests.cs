@@ -122,7 +122,7 @@ public sealed class SqliteEntryRepositoryTests : EntryRepositoryContract
     {
         var repository = _vault.CreateMigratedRepository();
         await repository.AddAsync(
-            VaultEntry.Create(new EntryMetadata("Existing"), EntrySecret.Empty, T0),
+            VaultEntry.Create(new EntryMetadata("Existing", DTags: ["Email"]), EntrySecret.Empty, T0),
             [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
         using (var connection = _vault.CreateFactory().Open())
         {
@@ -152,7 +152,7 @@ public sealed class SqliteEntryRepositoryTests : EntryRepositoryContract
     {
         var firstRun = _vault.CreateMigratedRepository();
         await firstRun.AddAsync(
-            VaultEntry.Create(new EntryMetadata("A"), EntrySecret.Empty, T0),
+            VaultEntry.Create(new EntryMetadata("A", STags: ["Sensitive"]), EntrySecret.Empty, T0),
             [new TagColorAssignment(TagKind.Security, "Sensitive", TagColor.Red)]);
 
         var secondRun = _vault.CreateMigratedRepository();

@@ -1,6 +1,9 @@
 using KeyHolder.Cryptography;
-using KeyHolder.Domain.Entries;
+using KeyHolder.Desktop.Icons;
+using KeyHolder.Desktop.Tags;
 using KeyHolder.Desktop.ViewModels;
+using KeyHolder.Domain.Entries;
+using KeyHolder.Domain.Tags;
 
 namespace KeyHolder.Desktop.Tests;
 
@@ -132,5 +135,57 @@ public sealed class EntryEditorViewModelTests
 
         Assert.Equal(string.Empty, harness.Vault.Editor!.Password);
         Assert.Equal("Leave empty to keep the current password.", harness.Vault.Editor.PasswordHint);
+    }
+
+    [Fact]
+    public async Task NewEntryStartsWithTheDefaultKeyIcon()
+    {
+        var harness = await Harness.CreateAsync();
+        await harness.Vault.LoadAsync();
+        harness.Vault.NewCommand.Execute(null);
+        var editor = harness.Vault.Editor!;
+
+        Assert.Equal(EntryIcon.Default, editor.Icon);
+        Assert.Equal(TagColor.Default, editor.IconColor);
+        Assert.Equal(IconCatalog.Options.Count, editor.Icons.Count);
+        Assert.Equal(TagColorPalette.Options.Count, editor.IconColors.Count);
+    }
+
+    [Fact]
+    public async Task ChosenIconAndColorAreSavedWithTheEntry()
+    {
+        var harness = await Harness.CreateAsync();
+        await harness.Vault.LoadAsync();
+        harness.Vault.NewCommand.Execute(null);
+        var editor = harness.Vault.Editor!;
+        editor.Title = "Fake Icon Entry";
+        editor.SelectedIcon = editor.Icons.Single(option => option.Icon == EntryIcon.Shield);
+        editor.SelectedIconColor = TagColorPalette.GetOption(TagColor.Blue);
+        editor.SaveCommand.Execute(null);
+
+        var stored = Assert.Single(
+            await harness.Repository.ListSummariesAsync(),
+            summary => summary.Metadata.Title == "Fake Icon Entry");
+        Assert.Equal(EntryIcon.Shield, stored.Metadata.Icon);
+        Assert.Equal(TagColor.Blue, stored.Metadata.IconColor);
+    }
+
+    [Fact]
+    public async Task EditingLoadsTheStoredIconAndColor()
+    {
+        var harness = await Harness.CreateAsync();
+        await harness.Vault.LoadAsync();
+        harness.Vault.NewCommand.Execute(null);
+        var editor = harness.Vault.Editor!;
+        editor.Title = "Fake Colored";
+        editor.SelectedIcon = editor.Icons.Single(option => option.Icon == EntryIcon.Mail);
+        editor.SelectedIconColor = TagColorPalette.GetOption(TagColor.Orange);
+        editor.SaveCommand.Execute(null);
+
+        await harness.SelectAsync("Fake Colored");
+        harness.Vault.EditCommand.Execute(null);
+
+        Assert.Equal(EntryIcon.Mail, harness.Vault.Editor!.Icon);
+        Assert.Equal(TagColor.Orange, harness.Vault.Editor.IconColor);
     }
 }

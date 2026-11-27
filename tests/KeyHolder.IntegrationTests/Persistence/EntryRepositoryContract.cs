@@ -362,11 +362,20 @@ public abstract class EntryRepositoryContract : IDisposable
     [Fact]
     public async Task TagColorsIgnoreCaseAndKeepOneColorPerTagName()
     {
+        var first = VaultEntry.Create(
+            new EntryMetadata("A", DTags: ["Email", "Финансы"]),
+            EntrySecret.Empty,
+            T0);
+        var second = VaultEntry.Create(
+            new EntryMetadata("B", DTags: ["Email", "финансы"]),
+            EntrySecret.Empty,
+            T0);
+
         await Repository.AddAsync(
-            NewEntry("A"),
+            first,
             [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue), new TagColorAssignment(TagKind.Data, "Финансы", TagColor.Green)]);
         await Repository.AddAsync(
-            NewEntry("B"),
+            second,
             [new TagColorAssignment(TagKind.Data, "EMAIL", TagColor.Red), new TagColorAssignment(TagKind.Data, "финансы", TagColor.Pink)]);
 
         var colors = await Colors.ListTagColorsAsync();
@@ -379,8 +388,13 @@ public abstract class EntryRepositoryContract : IDisposable
     [Fact]
     public async Task TheSameNameInBothListsHasSeparateColors()
     {
+        var entry = VaultEntry.Create(
+            new EntryMetadata("Both", DTags: ["Account"], STags: ["Account"]),
+            EntrySecret.Empty,
+            T0);
+
         await Repository.AddAsync(
-            NewEntry(),
+            entry,
             [new TagColorAssignment(TagKind.Data, "Account", TagColor.Teal), new TagColorAssignment(TagKind.Security, "Account", TagColor.Orange)]);
 
         var colors = await Colors.ListTagColorsAsync();
@@ -463,14 +477,73 @@ public abstract class EntryRepositoryContract : IDisposable
     }
 
     [Fact]
-    public async Task ColorsOfTagsNoLongerUsedAreKept()
+    public async Task ColorsOfTagsNoLongerUsedArePruned()
     {
         var entry = NewEntry();
         await Repository.AddAsync(entry, [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
 
         await Repository.DeleteAsync(entry.Id);
 
-        Assert.Single(await Colors.ListTagColorsAsync());
+        Assert.Empty(await Colors.ListTagColorsAsync());
+    }
+
+    [Fact]
+    public async Task RemovingATagFromTheLastEntryPrunesItsColor()
+    {
+        var entry = NewEntry();
+        await Repository.AddAsync(entry, [new TagColorAssignment(TagKind.Data, "Email", TagColor.Blue)]);
+
+        var withoutEmail = entry.Metadata with { DTags = ["Account"] };
+        await Repository.UpdateAsync(entry.Id, withoutEmail, null, T0.AddMinutes(1));
+
+        var colors = await Colors.ListTagColorsAsync();
+        Assert.DoesNotContain(colors, color => color.Name == "Email");
+    }
+
+    [Fact]
+    public async Task IconAndColorRoundTripWithTheEntry()
+    {
+        var entry = VaultEntry.Create(
+            new EntryMetadata("Bank", Icon: EntryIcon.Bank, IconColor: TagColor.Blue),
+            EntrySecret.Empty,
+            T0);
+
+        await Repository.AddAsync(entry);
+
+        var loaded = await Repository.GetAsync(entry.Id);
+        Assert.Equal(EntryIcon.Bank, loaded?.Metadata.Icon);
+        Assert.Equal(TagColor.Blue, loaded?.Metadata.IconColor);
+
+        var summary = await Repository.GetSummaryAsync(entry.Id);
+        Assert.Equal(EntryIcon.Bank, summary?.Metadata.Icon);
+        Assert.Equal(TagColor.Blue, summary?.Metadata.IconColor);
+    }
+
+    [Fact]
+    public async Task UpdatingIconChangesTheStoredValues()
+    {
+        var entry = NewEntry();
+        await Repository.AddAsync(entry);
+
+        await Repository.UpdateAsync(
+            entry.Id,
+            entry.Metadata with { Icon = EntryIcon.Shield, IconColor = TagColor.Red },
+            null,
+            T0.AddMinutes(1));
+
+        var loaded = await Repository.GetAsync(entry.Id);
+        Assert.Equal(EntryIcon.Shield, loaded?.Metadata.Icon);
+        Assert.Equal(TagColor.Red, loaded?.Metadata.IconColor);
+    }
+
+    [Fact]
+    public async Task DefaultIconAndColorAreNotRequired()
+    {
+        await Repository.AddAsync(NewEntry());
+
+        var loaded = await Repository.GetAsync((await Repository.ListSummariesAsync())[0].Id);
+        Assert.Equal(EntryIcon.Default, loaded?.Metadata.Icon);
+        Assert.Equal(TagColor.Default, loaded?.Metadata.IconColor);
     }
 
     [Fact]

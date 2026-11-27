@@ -26,6 +26,16 @@ public sealed class EntryListItemViewModel
 
     public string Title => Summary.Metadata.Title;
 
+    /// <summary>
+    /// Built-in icon for the list and details. Default is the key icon.
+    /// </summary>
+    public EntryIcon Icon => Summary.Metadata.Icon;
+
+    /// <summary>
+    /// Tint of <see cref="Icon"/>. Reuses the tag color palette.
+    /// </summary>
+    public TagColor IconColor => Summary.Metadata.IconColor;
+
     public string Username => Summary.Metadata.Username ?? string.Empty;
 
     public string Email => Summary.Metadata.Email ?? string.Empty;

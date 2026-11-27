@@ -1,4 +1,4 @@
-# ADR 0009 — Interim plain-column schema for fake data (Milestone 1)
+﻿# ADR 0009 — Interim plain-column schema for fake data (Milestone 1)
 
 - **Status:** Accepted (Milestone 1 only; superseded by the envelope schema in Milestone 2)
 - **Date:** 2026-11-08
@@ -12,13 +12,15 @@ The storage still has to survive restart, run in transactions, and not decide th
 
 Store entries in SQLite with **plain columns in two groups**:
 
-- metadata group: `title`, `username`, `email`, `url`, `d_tags`, `s_tags`, `importance`, `metadata_revision`
+- metadata group: `title`, `username`, `email`, `url`, `d_tags`, `s_tags`, `importance`, `icon`, `icon_color`, `metadata_revision`
 - secret group: `password`, `notes`, `secret_revision`
 
 Tags are JSON text arrays.
 Tag colors live in a separate table, `tag_color` (migration 2): one row per vault, list (`d` or `s`), and case-insensitive name key, with a fixed color name.
 Tags without a color have no row. Colors are saved in the same transaction as the entry that sets them.
+Rows for tags no entry uses any more are pruned in that same write path.
 Tag colors are metadata, so Milestone 2 moves them into the metadata envelope scope.
+Migration 3 adds nullable `icon` and `icon_color` columns on `entry` (NULL = default key icon and Default color). Icons are metadata too.
 Schema versions use `PRAGMA user_version` with transactional, ordered migrations.
 The UI only sees `IEntryRepository`, and list reads return summaries without the secret group.
 `GetSecretAsync` reads the secret group of exactly one entry.

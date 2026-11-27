@@ -55,7 +55,8 @@ public sealed class SearchFieldOptionViewModel : ViewModelBase
 }
 
 /// <summary>
-/// The customizable list of fields search looks in (1 to 6 of title, username, email, URL, d-tags, s-tags).
+/// The customizable list of fields search looks in (1 to 6 of title, username, email, URL,
+/// Record type, Security category).
 /// </summary>
 public sealed class SearchOptionsViewModel : ViewModelBase
 {
@@ -70,8 +71,8 @@ public sealed class SearchOptionsViewModel : ViewModelBase
             Create(SearchField.Username, "Username"),
             Create(SearchField.Email, "Email"),
             Create(SearchField.Url, "URL"),
-            Create(SearchField.DTags, "d-tags (data)"),
-            Create(SearchField.STags, "s-tags (security)"),
+            Create(SearchField.DTags, "Record type"),
+            Create(SearchField.STags, "Security category"),
         ];
         ResetCommand = new RelayCommand(Reset);
     }

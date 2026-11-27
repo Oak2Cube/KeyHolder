@@ -17,3 +17,4 @@ Status values: Proposed, Accepted, Superseded, Deprecated.
 | [0009](0009-interim-plain-fake-data-schema.md) | Interim plain-column schema for fake data (Milestone 1) | Accepted |
 | [0010](0010-three-panel-layout-and-adaptive-window.md) | Three-panel vault layout and adaptive window | Accepted |
 | [0011](0011-full-area-two-column-editor.md) | Full-area two-column entry editor | Accepted |
+| [0012](0012-entry-icons.md) | Built-in entry icons | Accepted |

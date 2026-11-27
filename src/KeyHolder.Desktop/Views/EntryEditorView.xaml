@@ -6,7 +6,7 @@
         <Style x:Key="EditorLabel" TargetType="TextBlock">
             <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="Margin" Value="0,10,0,3" />
+            <Setter Property="Margin" Value="0,14,0,3" />
         </Style>
 
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
@@ -235,6 +235,53 @@
                 <ContentControl Content="{Binding DTags}" ContentTemplate="{StaticResource TagListEditorTemplate}" IsTabStop="False" />
 
                 <ContentControl Content="{Binding STags}" ContentTemplate="{StaticResource TagListEditorTemplate}" IsTabStop="False" />
+
+                <TextBlock Style="{StaticResource EditorLabel}" Text="Icon" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <views:EntryIconView Icon="{Binding Icon}"
+                                         IconColor="{Binding IconColor}"
+                                         IconSize="40"
+                                         VerticalAlignment="Top" />
+                    <TextBlock Margin="12,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="{StaticResource SecondaryTextBrush}"
+                               Text="{Binding SelectedIcon.Name}" />
+                </StackPanel>
+
+                <ListBox MaxHeight="160"
+                         ItemsSource="{Binding Icons}"
+                         SelectedItem="{Binding SelectedIcon}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <views:EntryIconView Icon="{Binding Icon}"
+                                                 IconColor="{Binding DataContext.IconColor, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                                 IconSize="32"
+                                                 ToolTip="{Binding Name}" />
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Style="{StaticResource EditorLabel}" Text="Icon color" />
+                <ComboBox ItemsSource="{Binding IconColors}" SelectedItem="{Binding SelectedIconColor}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="12"
+                                         Height="12"
+                                         Margin="0,0,8,0"
+                                         VerticalAlignment="Center"
+                                         Fill="{Binding Brush}" />
+                                <TextBlock Foreground="{Binding Brush}" Text="{Binding Name}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
             </StackPanel>
         </Grid>
 
